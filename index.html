@@ -1,59 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Hospital Radio - All Time Greats</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #004a99; color: white; padding: 30px 20px; text-align: center; }
-        .slot { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #eee; }
-        .num { width: 35px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.6; }
-        .details { flex-grow: 1; }
-        .artist { font-weight: bold; color: #222; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
-        .title { color: #555; font-size: 0.95em; }
-        .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 80px; text-align: center; }
-        .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
-        .classic { background: #e1f0ff; color: #004a99; }
-        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.85em; border-top: 1px solid #eee; line-height: 1.6; }
-        
-        .download-btn { 
-            display: inline-block; 
-            margin-top: 15px; 
-            padding: 10px 20px; 
-            background: #ffffff; 
-            color: #004a99; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            font-size: 0.85em;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: all 0.2s;
-        }
-        .download-btn:hover { background: #e1f0ff; transform: translateY(-1px); }
-    </style>
-</head>
-<body>
-
-<div class="card">
-    <div class="header">
-        <h1 style="margin:0; font-size: 1.8em; letter-spacing: 2px;">ALL-TIME GREATS</h1>
-        <button class="download-btn" onclick="downloadPlaylist()">📥 Download Playlist (.txt)</button>
-    </div>
-    
-    <div id="main-list">Loading All-Time Greats...</div>
-
-    <div class="footer">
-        <strong>Developer:</strong> Tony Wilding<br>
-        From the National Hospital Radio Request Charts (Top 40) since 2004, curated by <strong>Mark W Snowdon</strong>
-    </div>
-</div>
-
 <script>
     const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?nocache=' + Date.now();
     let currentPlaylistData = [];
+
+    // Helper function to shuffle an array (Fisher-Yates)
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
 
     async function start() {
         try {
@@ -66,7 +22,6 @@
                 let artist = c[0].replace(/"/g, "").trim();
                 let title = c[1].replace(/"/g, "").trim();
 
-                // Specific Cleanup for Stevie Wonder
                 if (artist.toLowerCase().includes("stevie wonder") && title.toLowerCase().includes("i just called")) {
                     title = "I Just Called to Say I Love You";
                 }
@@ -78,11 +33,13 @@
                 };
             });
 
+            // Sort by score to define tiers
             allSongs.sort((a, b) => b.score - a.score);
             
             const powerLimit = Math.floor(allSongs.length * 0.15);
-            const tierA = allSongs.slice(0, powerLimit);
-            const tierC = allSongs.slice(powerLimit);
+            // We shuffle the pools so the selection is random every time
+            const tierA = shuffle(allSongs.slice(0, powerLimit));
+            const tierC = shuffle(allSongs.slice(powerLimit));
 
             let artistHistory = [];
             let html = "";
@@ -92,21 +49,30 @@
                 const countNum = (i + 1).toString().padStart(2, '0');
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
-                let baseIdx = (i * 13) % pool.length; 
+                
                 let pick = null;
+                let pickIndex = -1;
 
-                for (let offset = 0; offset < Math.min(pool.length, 50); offset++) {
-                    let candidate = pool[(baseIdx + offset) % pool.length];
-                    if (!artistHistory.includes(candidate.artist)) {
-                        pick = candidate;
+                // Look for a song where the artist hasn't played recently
+                for (let j = 0; j < pool.length; j++) {
+                    if (!artistHistory.includes(pool[j].artist)) {
+                        pick = pool[j];
+                        pickIndex = j;
                         break;
                     }
                 }
                 
-                if (!pick) pick = pool[baseIdx];
+                // Fallback if no unique artist found
+                if (!pick) {
+                    pickIndex = 0;
+                    pick = pool[pickIndex];
+                }
+
+                // Remove the picked song from the pool so it isn't picked again in this session
+                pool.splice(pickIndex, 1);
 
                 artistHistory.push(pick.artist);
-                if (artistHistory.length > 10) artistHistory.shift();
+                if (artistHistory.length > 8) artistHistory.shift();
 
                 currentPlaylistData.push({
                     id: countNum,
@@ -126,33 +92,12 @@
             }
             document.getElementById('main-list').innerHTML = html;
         } catch (e) {
+            console.error(e);
             document.getElementById('main-list').innerHTML = "Error loading data.";
         }
     }
 
-    function downloadPlaylist() {
-        if (currentPlaylistData.length === 0) return;
-        let content = `ALL-TIME GREATS PLAYLIST\r\n`;
-        content += `-------------------------------------------\r\n`;
-        currentPlaylistData.forEach(song => {
-            content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
-        });
-        content += `-------------------------------------------\r\n`;
-        content += `From the National Hospital Radio Request Charts (Top 40) since 2004, curated by Mark W Snowdon\r\n`;
-        content += `System Developer: Tony Wilding`;
-        
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `All_Time_Greats_Playlist.txt`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-    }
-
+    // ... (Keep your downloadPlaylist function exactly as it was)
+    
     start();
 </script>
-</body>
-</html>
