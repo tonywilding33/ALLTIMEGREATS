@@ -6,48 +6,48 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #004a99; color: white; padding: 20px; text-align: center; position: relative; }
-        .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
-        .num { width: 40px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.7; }
+        .header { background: #004a99; color: white; padding: 25px 20px; text-align: center; position: relative; }
+        .slot { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #eee; }
+        .num { width: 35px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.6; }
         .details { flex-grow: 1; }
-        .artist { font-weight: bold; color: #222; display: block; }
-        .title { color: #666; font-size: 0.9em; }
+        .artist { font-weight: bold; color: #222; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+        .title { color: #555; font-size: 0.95em; }
         .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 80px; text-align: center; }
         .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
         .classic { background: #e1f0ff; color: #004a99; }
-        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.8em; border-top: 1px solid #eee; line-height: 1.5; }
+        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.8em; border-top: 1px solid #eee; line-height: 1.6; }
         
         .download-btn { 
             display: inline-block; 
             margin-top: 15px; 
-            padding: 8px 15px; 
+            padding: 10px 20px; 
             background: #ffffff; 
             color: #004a99; 
             text-decoration: none; 
-            border-radius: 5px; 
+            border-radius: 6px; 
             font-weight: bold; 
             font-size: 0.85em;
             cursor: pointer;
             border: none;
-            transition: background 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
-        .download-btn:hover { background: #e1f0ff; }
+        .download-btn:hover { background: #e1f0ff; transform: translateY(-1px); }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div class="header">
-        <h2 style="margin:0;">📻 All-Time Greats Hourly List</h2>
-        <div id="day-info" style="opacity:0.8; font-size: 0.9em; margin-top: 5px;"></div>
-        <button class="download-btn" onclick="downloadPlaylist()">📥 Download Text List</button>
+        <h1 style="margin:0; font-size: 1.8em; letter-spacing: 1px;">ALL-TIME GREATS</h1>
+        <button class="download-btn" onclick="downloadPlaylist()">📥 DOWNLOAD LIST</button>
     </div>
     
-    <div id="main-list">Loading rotation...</div>
+    <div id="main-list">Loading All-Time Greats...</div>
 
     <div class="footer">
         <strong>Developer:</strong> Tony Wilding | <strong>Research:</strong> Mark W Snowdon<br>
-        <span style="color: #7f8c8d; font-style: italic;">Powered by the National Hospital Radio Request Archives</span>
+        <span style="color: #7f8c8d; font-style: italic;">National Hospital Radio Request Archives</span>
     </div>
 </div>
 
@@ -81,8 +81,6 @@
             
             const today = new Date();
             const dayNum = today.getDay();
-            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            document.getElementById('day-info').innerText = days[dayNum] + " Rotation";
 
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
@@ -108,8 +106,7 @@
                 currentPlaylistData.push({
                     id: countNum,
                     artist: pick.artist,
-                    title: pick.title,
-                    type: isPower ? 'POWER' : 'GOLD'
+                    title: pick.title
                 });
 
                 html += `<div class="slot">
@@ -118,28 +115,31 @@
                         <span class="artist">${pick.artist}</span>
                         <span class="title">${pick.title}</span>
                     </div>
-                    <span class="tag ${isPower ? 'power' : 'classic'}">${isPower ? '⚡ Power Gold' : 'Classic'}</span>
+                    <span class="tag ${isPower ? 'power' : 'classic'}">${isPower ? '⚡ Power' : 'Classic'}</span>
                 </div>`;
             }
             document.getElementById('main-list').innerHTML = html;
         } catch (e) {
-            document.getElementById('main-list').innerHTML = "Error: " + e.message;
+            document.getElementById('main-list').innerHTML = "Error loading data.";
         }
     }
 
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
-        let content = `HOSPITAL RADIO PLAYLIST - ${new Date().toLocaleDateString()}\r\n`;
-        content += `-------------------------------------------\r\n`;
+        let content = `ALL-TIME GREATS\r\n`;
+        content += `Generated: ${new Date().toLocaleDateString()}\r\n`;
+        content += `------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
-            content += `${song.id} | ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
+            content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title}\r\n`;
         });
-        content += `-------------------------------------------\r\n`;
+        content += `------------------------------\r\n`;
+        content += `Data: Mark W Snowdon | Dev: Tony Wilding`;
+        
         const blob = new Blob([content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Playlist_List.txt`;
+        a.download = `All_Time_Greats.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
