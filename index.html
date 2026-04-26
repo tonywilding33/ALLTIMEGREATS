@@ -47,7 +47,7 @@
 
     <div class="footer">
         <strong>Developer:</strong> Tony Wilding<br>
-        Compiled & Curated from the National Hospital Radio Charts (Top 40) since 2004 by <strong>Mark W Snowdon</strong>
+        Curated from the National Hospital Radio Charts (Top 40) since 2004 by <strong>Mark W Snowdon</strong>
     </div>
 </div>
 
@@ -66,7 +66,7 @@
                 let artist = c[0].replace(/"/g, "").trim();
                 let title = c[1].replace(/"/g, "").trim();
 
-                // DATA CLEANUP: Ensure correct titles for historical hits
+                // Specific Cleanup for Stevie Wonder
                 if (artist.toLowerCase().includes("stevie wonder") && title.toLowerCase().includes("i just called")) {
                     title = "I Just Called to Say I Love You";
                 }
@@ -90,10 +90,8 @@
 
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
-                
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
-                
                 let baseIdx = (i * 13) % pool.length; 
                 let pick = null;
 
@@ -140,7 +138,7 @@
             content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
         });
         content += `-------------------------------------------\r\n`;
-        content += `Compiled & Curated from the National Hospital Radio Charts (Top 40) since 2004 by Mark W Snowdon\r\n`;
+        content += `Curated from the National Hospital Radio Charts (Top 40) since 2004 by Mark W Snowdon\r\n`;
         content += `System Developer: Tony Wilding`;
         
         const blob = new Blob([content], { type: 'text/plain' });
