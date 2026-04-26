@@ -40,7 +40,7 @@
 <div class="card">
     <div class="header">
         <h1 style="margin:0; font-size: 1.8em; letter-spacing: 2px;">ALL-TIME GREATS</h1>
-        <button class="download-btn" onclick="downloadPlaylist()">📥 DOWNLOAD LIST</button>
+        <button class="download-btn" onclick="downloadPlaylist()">📥 Download Playlist (.txt)</button>
     </div>
     
     <div id="main-list">Loading All-Time Greats...</div>
@@ -70,7 +70,6 @@
                 };
             });
 
-            // Rank purely by score
             allSongs.sort((a, b) => b.score - a.score);
             
             const powerLimit = Math.floor(allSongs.length * 0.15);
@@ -81,15 +80,13 @@
             let html = "";
             currentPlaylistData = []; 
 
-            // Generate 16 items for the display
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
                 
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
                 
-                // Use a generic index that doesn't rely on day-of-week
-                let baseIdx = (i * 7) % pool.length; 
+                let baseIdx = (i * 13) % pool.length; 
                 let pick = null;
 
                 for (let offset = 0; offset < Math.min(pool.length, 50); offset++) {
@@ -108,7 +105,8 @@
                 currentPlaylistData.push({
                     id: countNum,
                     artist: pick.artist,
-                    title: pick.title
+                    title: pick.title,
+                    type: isPower ? 'POWER' : 'CLASSIC'
                 });
 
                 html += `<div class="slot">
@@ -128,10 +126,10 @@
 
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
-        let content = `ALL-TIME GREATS\r\n`;
+        let content = `ALL-TIME GREATS PLAYLIST\r\n`;
         content += `------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
-            content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title}\r\n`;
+            content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
         });
         content += `------------------------------\r\n`;
         content += `Data: Mark W Snowdon | Dev: Tony Wilding`;
@@ -140,7 +138,7 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `All_Time_Greats_List.txt`;
+        a.download = `All_Time_Greats_Playlist.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
