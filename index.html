@@ -6,7 +6,7 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #004a99; color: white; padding: 25px 20px; text-align: center; position: relative; }
+        .header { background: #004a99; color: white; padding: 30px 20px; text-align: center; }
         .slot { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #eee; }
         .num { width: 35px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.6; }
         .details { flex-grow: 1; }
@@ -39,7 +39,7 @@
 
 <div class="card">
     <div class="header">
-        <h1 style="margin:0; font-size: 1.8em; letter-spacing: 1px;">ALL-TIME GREATS</h1>
+        <h1 style="margin:0; font-size: 1.8em; letter-spacing: 2px;">ALL-TIME GREATS</h1>
         <button class="download-btn" onclick="downloadPlaylist()">📥 DOWNLOAD LIST</button>
     </div>
     
@@ -70,24 +70,26 @@
                 };
             });
 
+            // Rank purely by score
             allSongs.sort((a, b) => b.score - a.score);
-            const powerCount = Math.floor(allSongs.length * 0.15);
-            const tierA = allSongs.slice(0, powerCount);
-            const tierC = allSongs.slice(powerCount);
+            
+            const powerLimit = Math.floor(allSongs.length * 0.15);
+            const tierA = allSongs.slice(0, powerLimit);
+            const tierC = allSongs.slice(powerLimit);
 
             let artistHistory = [];
             let html = "";
             currentPlaylistData = []; 
-            
-            const today = new Date();
-            const dayNum = today.getDay();
 
+            // Generate 16 items for the display
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
                 
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
-                let baseIdx = (dayNum * 41 + i) % pool.length;
+                
+                // Use a generic index that doesn't rely on day-of-week
+                let baseIdx = (i * 7) % pool.length; 
                 let pick = null;
 
                 for (let offset = 0; offset < Math.min(pool.length, 50); offset++) {
@@ -101,7 +103,7 @@
                 if (!pick) pick = pool[baseIdx];
 
                 artistHistory.push(pick.artist);
-                if (artistHistory.length > 12) artistHistory.shift();
+                if (artistHistory.length > 10) artistHistory.shift();
 
                 currentPlaylistData.push({
                     id: countNum,
@@ -127,7 +129,6 @@
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
         let content = `ALL-TIME GREATS\r\n`;
-        content += `Generated: ${new Date().toLocaleDateString()}\r\n`;
         content += `------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
             content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title}\r\n`;
@@ -139,7 +140,7 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `All_Time_Greats.txt`;
+        a.download = `All_Time_Greats_List.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
