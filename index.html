@@ -6,7 +6,7 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #004a99; color: white; padding: 20px; text-align: center; }
+        .header { background: #004a99; color: white; padding: 20px; text-align: center; position: relative; }
         .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
         .time { width: 60px; font-weight: bold; color: #004a99; font-size: 1.1em; }
         .details { flex-grow: 1; }
@@ -18,6 +18,23 @@
         .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.8em; border-top: 1px solid #eee; line-height: 1.5; }
         .credit-line { display: block; margin-bottom: 4px; }
         .source-line { color: #7f8c8d; font-style: italic; }
+        
+        /* New Styles for Download Button */
+        .download-btn { 
+            display: inline-block; 
+            margin-top: 15px; 
+            padding: 8px 15px; 
+            background: #ffffff; 
+            color: #004a99; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-weight: bold; 
+            font-size: 0.85em;
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s;
+        }
+        .download-btn:hover { background: #e1f0ff; }
     </style>
 </head>
 <body>
@@ -26,6 +43,7 @@
     <div class="header">
         <h2 style="margin:0;">📻 All-Time Greats Hourly Clock</h2>
         <div id="day-info" style="opacity:0.8; font-size: 0.9em; margin-top: 5px;"></div>
+        <button class="download-btn" onclick="downloadPlaylist()">📥 Download Playlist (.txt)</button>
     </div>
     
     <div id="main-list">Loading rotation...</div>
@@ -39,6 +57,7 @@
 
 <script>
     const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?nocache=' + Date.now();
+    let currentPlaylistData = []; // Global variable to store current view for download
 
     async function start() {
         try {
@@ -62,6 +81,8 @@
 
             let artistHistory = [];
             let html = "";
+            currentPlaylistData = []; // Clear previous
+            
             const today = new Date();
             const dayNum = today.getDay();
             const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -69,7 +90,6 @@
 
             for (let i = 0; i < 16; i++) {
                 const quarter = Math.floor(i / 4);
-                // Displays as :00, :15, :30, :45
                 const timeLabel = ":" + (quarter * 15).toString().padStart(2, '0');
                 
                 let isPower = (i % 4 === 0);
@@ -90,6 +110,14 @@
                 artistHistory.push(pick.artist);
                 if (artistHistory.length > 12) artistHistory.shift();
 
+                // Store for download
+                currentPlaylistData.push({
+                    time: timeLabel,
+                    artist: pick.artist,
+                    title: pick.title,
+                    type: isPower ? 'POWER GOLD' : 'CLASSIC'
+                });
+
                 html += `<div class="slot">
                     <span class="time">${timeLabel}</span>
                     <div class="details">
@@ -104,6 +132,34 @@
             document.getElementById('main-list').innerHTML = "Error: " + e.message;
         }
     }
+
+    function downloadPlaylist() {
+        if (currentPlaylistData.length === 0) return;
+
+        const timestamp = new Date().toLocaleDateString();
+        let content = `HOSPITAL RADIO - ALL TIME GREATS PLAYLIST\r\n`;
+        content += `Generated: ${timestamp}\r\n`;
+        content += `-------------------------------------------\r\n\r\n`;
+
+        currentPlaylistData.forEach(song => {
+            content += `${song.time} | ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
+        });
+
+        content += `\r\n-------------------------------------------\r\n`;
+        content += `Historical Data by Mark W Snowdon\r\n`;
+        content += `System by Tony Wilding`;
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Hospital_Radio_Playlist_${new Date().toISOString().slice(0,10)}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+
     start();
 </script>
 </body>
