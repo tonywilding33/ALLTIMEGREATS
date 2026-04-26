@@ -1,37 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Radio - 1 Hour Schedule</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; padding: 20px; }
-        .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .header { background: #004a99; color: white; padding: 20px; text-align: center; border-radius: 12px 12px 0 0; }
-        .content { padding: 10px 20px; }
-        .quarter-block { border-bottom: 2px solid #004a99; padding: 10px 0; margin-bottom: 10px; }
-        .quarter-header { color: #004a99; font-weight: bold; font-size: 1.2em; margin-bottom: 10px; display: block; }
-        .song-row { display: flex; padding: 5px 0; border-bottom: 1px solid #eee; align-items: center; }
-        .song-row:last-child { border: none; }
-        .artist { font-weight: 600; color: #333; }
-        .title { color: #666; margin-left: 5px; }
-        .tag { font-size: 0.7em; background: #e1f0ff; color: #004a99; padding: 2px 6px; border-radius: 4px; margin-left: auto; }
-    </style>
-</head>
-<body>
-
-<div class="card">
-    <div class="header">
-        <h2 style="margin:0;">📻 10:00 - 11:00 Playlist</h2>
-        <p id="date-display" style="margin:5px 0 0 0; opacity: 0.8;"></p>
-    </div>
-    <div class="content" id="playlist-container">
-        Loading 16-song hour...
-    </div>
-</div>
-
 <script>
-    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
+    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv' + '?t=' + new Date().getTime();
 
     async function generateFullHour() {
         try {
@@ -44,39 +12,47 @@
 
             rows.forEach(line => {
                 const cols = line.split(',');
+                if (cols.length < 2) return;
                 const score = parseInt(cols[cols.length - 4]) || 0;
-                const song = { artist: cols[0], title: cols[1] };
+                const song = { artist: cols[0].trim(), title: cols[1].trim() };
                 if (score > 600) tierA.push(song); else tierC.push(song);
             });
 
             const dayNum = new Date().getDay(); 
-            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            document.getElementById('date-display').innerText = days[dayNum];
-
             let html = "";
-            
-            // Loop for 4 quarters (10:00, 10:15, 10:30, 10:45)
+            let recentlyPlayedArtists = []; // This tracks the last 5 artists
+
             for (let q = 0; q < 4; q++) {
                 const timeStr = "10:" + (q * 15 === 0 ? "00" : q * 15);
                 html += `<div class="quarter-block"><span class="quarter-header">${timeStr} Section</span>`;
 
-                // For each 15 mins, pick 4 songs (1 Gold, 3 Classics)
-                // We use different offsets for each slot to ensure no artist repeats
                 for (let slot = 0; slot < 4; slot++) {
                     let song;
-                    let type;
+                    let type = (slot === 0) ? "Power Gold" : "Classic";
+                    let pool = (slot === 0) ? tierA : tierC;
                     
-                    if (slot === 0) {
-                        // Slot 1: Power Gold (Tier A)
-                        const idx = (dayNum * 13 + q + slot) % tierA.length;
-                        song = tierA[idx];
-                        type = "Power Gold";
-                    } else {
-                        // Slots 2, 3, 4: Classics (Tier C)
-                        const idx = (dayNum * 19 + q * 4 + slot) % tierC.length;
-                        song = tierC[idx];
-                        type = "Classic";
+                    // Math + Collision Detection
+                    let baseIdx = (dayNum * 17 + q * 4 + slot) % pool.length;
+                    let attempts = 0;
+                    
+                    // Look for a song where the artist isn't in the "Recently Played" list
+                    while (attempts < 10) {
+                        let checkIdx = (baseIdx + attempts) % pool.length;
+                        let candidate = pool[checkIdx];
+                        
+                        if (!recentlyPlayedArtists.includes(candidate.artist)) {
+                            song = candidate;
+                            break;
+                        }
+                        attempts++;
                     }
+                    
+                    // Fallback if we can't find a unique artist (rare)
+                    if (!song) song = pool[baseIdx];
+
+                    // Add to buffer and keep it to last 5 songs
+                    recentlyPlayedArtists.push(song.artist);
+                    if (recentlyPlayedArtists.length > 5) recentlyPlayedArtists.shift();
 
                     html += `
                     <div class="song-row">
@@ -96,6 +72,3 @@
 
     generateFullHour();
 </script>
-
-</body>
-</html>
