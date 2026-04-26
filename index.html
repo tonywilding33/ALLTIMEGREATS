@@ -63,9 +63,17 @@
             
             let allSongs = rows.map(r => {
                 const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                let artist = c[0].replace(/"/g, "").trim();
+                let title = c[1].replace(/"/g, "").trim();
+
+                // DATA CLEANUP: Ensure correct titles for historical hits
+                if (artist.toLowerCase().includes("stevie wonder") && title.toLowerCase().includes("i just called")) {
+                    title = "I Just Called to Say I Love You";
+                }
+
                 return { 
-                    artist: c[0].replace(/"/g, "").trim(), 
-                    title: c[1].replace(/"/g, "").trim(),
+                    artist: artist, 
+                    title: title,
                     score: parseInt(c[c.length-4]) || 0 
                 };
             });
