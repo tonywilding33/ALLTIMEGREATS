@@ -1,74 +1,110 @@
-<script>
-    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv' + '?t=' + new Date().getTime();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Radio - Full Hour</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: #004a99; color: white; padding: 20px; text-align: center; border-radius: 12px 12px 0 0; }
+        .content { padding: 20px; }
+        .slot { border-left: 5px solid #3498db; background: #f8f9fa; margin-bottom: 10px; padding: 10px; border-radius: 0 8px 8px 0; }
+        .time { font-weight: bold; color: #004a99; margin-right: 10px; }
+        .tag { font-size: 0.7em; background: #e1f0ff; color: #004a99; padding: 2px 6px; border-radius: 4px; float: right; }
+        #error-log { color: red; font-size: 0.8em; margin-top: 20px; }
+    </style>
+</head>
+<body>
 
-    async function generateFullHour() {
+<div class="card">
+    <div class="header">
+        <h2 style="margin:0;">📻 10:00 AM - 11:00 AM</h2>
+        <div id="day-label"></div>
+    </div>
+    <div class="content" id="playlist">
+        Generating schedule...
+    </div>
+    <div id="error-log"></div>
+</div>
+
+<script>
+    // Ensure this URL is EXACTLY correct for your repo
+    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?v=' + Date.now();
+
+    async function start() {
+        const display = document.getElementById('playlist');
+        const log = document.getElementById('error-log');
+
         try {
             const response = await fetch(csvUrl);
-            const data = await response.text();
-            const rows = data.split('\n').slice(1).filter(r => r.trim() !== "");
+            if (!response.ok) throw new Error("Could not find the CSV file. Check branch name (main/master).");
+            
+            const text = await response.text();
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+            
+            let tierA = []; 
+            let tierC = [];
 
-            let tierA = []; // Power Gold
-            let tierC = []; // Classics
+            // Robust Parsing: Handles quotes and commas
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (cols.length < 5) continue;
 
-            rows.forEach(line => {
-                const cols = line.split(',');
-                if (cols.length < 2) return;
+                const artist = cols[0].replace(/"/g, "").trim();
+                const title = cols[1].replace(/"/g, "").trim();
                 const score = parseInt(cols[cols.length - 4]) || 0;
-                const song = { artist: cols[0].trim(), title: cols[1].trim() };
-                if (score > 600) tierA.push(song); else tierC.push(song);
-            });
 
-            const dayNum = new Date().getDay(); 
+                const song = { artist, title };
+                if (score > 600) tierA.push(song); else tierC.push(song);
+            }
+
+            if (tierA.length === 0 || tierC.length === 0) throw new Error("Database parsed but Tiers are empty.");
+
+            const dayNum = new Date().getDay();
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            document.getElementById('day-label').innerText = days[dayNum];
+
             let html = "";
-            let recentlyPlayedArtists = []; // This tracks the last 5 artists
+            let artistHistory = [];
 
             for (let q = 0; q < 4; q++) {
-                const timeStr = "10:" + (q * 15 === 0 ? "00" : q * 15);
-                html += `<div class="quarter-block"><span class="quarter-header">${timeStr} Section</span>`;
+                for (let s = 0; s < 4; s++) {
+                    const time = `10:${(q * 15).toString().padStart(2, '0')}`;
+                    let pool = (s === 0) ? tierA : tierC;
+                    let type = (s === 0) ? "Power Gold" : "Classic";
+                    
+                    // Shift Math
+                    let baseIdx = (dayNum * 19 + q * 4 + s) % pool.length;
+                    let selectedSong = pool[baseIdx];
 
-                for (let slot = 0; slot < 4; slot++) {
-                    let song;
-                    let type = (slot === 0) ? "Power Gold" : "Classic";
-                    let pool = (slot === 0) ? tierA : tierC;
-                    
-                    // Math + Collision Detection
-                    let baseIdx = (dayNum * 17 + q * 4 + slot) % pool.length;
-                    let attempts = 0;
-                    
-                    // Look for a song where the artist isn't in the "Recently Played" list
-                    while (attempts < 10) {
-                        let checkIdx = (baseIdx + attempts) % pool.length;
-                        let candidate = pool[checkIdx];
-                        
-                        if (!recentlyPlayedArtists.includes(candidate.artist)) {
-                            song = candidate;
-                            break;
-                        }
-                        attempts++;
+                    // Artist Separation Check
+                    let offset = 0;
+                    while (artistHistory.includes(selectedSong.artist) && offset < pool.length) {
+                        offset++;
+                        selectedSong = pool[(baseIdx + offset) % pool.length];
                     }
-                    
-                    // Fallback if we can't find a unique artist (rare)
-                    if (!song) song = pool[baseIdx];
 
-                    // Add to buffer and keep it to last 5 songs
-                    recentlyPlayedArtists.push(song.artist);
-                    if (recentlyPlayedArtists.length > 5) recentlyPlayedArtists.shift();
+                    artistHistory.push(selectedSong.artist);
+                    if (artistHistory.length > 6) artistHistory.shift();
 
                     html += `
-                    <div class="song-row">
-                        <span class="artist">${song.artist}</span>
-                        <span class="title">- ${song.title}</span>
-                        <span class="tag">${type}</span>
-                    </div>`;
+                        <div class="slot">
+                            <span class="tag">${type}</span>
+                            <span class="time">${time}</span>
+                            <strong>${selectedSong.artist}</strong> - ${selectedSong.title}
+                        </div>`;
                 }
-                html += `</div>`;
             }
-            document.getElementById('playlist-container').innerHTML = html;
+            display.innerHTML = html;
 
-        } catch (error) {
-            document.getElementById('playlist-container').innerHTML = "Error loading music database.";
+        } catch (e) {
+            display.innerHTML = "⚠️ Schedule Failed to Load.";
+            log.innerText = "Debug Info: " + e.message;
         }
     }
 
-    generateFullHour();
+    start();
 </script>
+</body>
+</html>
