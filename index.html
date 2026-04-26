@@ -47,7 +47,7 @@
 
     <div class="footer">
         <strong>Developer:</strong> Tony Wilding<br>
-        Curated from the National Hospital Radio Request Charts (Top 40) since 2004 by <strong>Mark W Snowdon</strong>
+        From the National Hospital Radio Request Charts (Top 40) since 2004, curated by <strong>Mark W Snowdon</strong>
     </div>
 </div>
 
@@ -138,7 +138,7 @@
             content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
         });
         content += `-------------------------------------------\r\n`;
-        content += `Curated from the National Hospital Radio Request Charts (Top 40) since 2004 by Mark W Snowdon\r\n`;
+        content += `From the National Hospital Radio Request Charts (Top 40) since 2004, curated by Mark W Snowdon\r\n`;
         content += `System Developer: Tony Wilding`;
         
         const blob = new Blob([content], { type: 'text/plain' });
