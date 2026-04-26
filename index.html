@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Radio Scheduler V1.2</title>
+    <title>Hospital Radio - All Time Greats</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
         .header { background: #004a99; color: white; padding: 20px; text-align: center; }
-        .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; transition: background 0.2s; }
-        .slot:hover { background: #f9f9f9; }
+        .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
         .time { width: 60px; font-weight: bold; color: #004a99; font-size: 0.9em; }
         .details { flex-grow: 1; }
         .artist { font-weight: bold; color: #222; display: block; }
@@ -16,16 +15,26 @@
         .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 80px; text-align: center; }
         .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
         .classic { background: #e1f0ff; color: #004a99; }
+        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.8em; border-top: 1px solid #eee; line-height: 1.5; }
+        .credit-line { display: block; margin-bottom: 4px; }
+        .source-line { color: #7f8c8d; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div class="header">
-        <h2 style="margin:0;">📻 10:00 AM Hour</h2>
-        <div id="day-info" style="opacity:0.8; font-size: 0.9em;"></div>
+        <h2 style="margin:0;">📻 10:00 AM - 11:00 AM Hour</h2>
+        <div id="day-info" style="opacity:0.8; font-size: 0.9em; margin-top: 5px;"></div>
     </div>
-    <div id="main-list">Loading unique playlist...</div>
+    
+    <div id="main-list">Loading rotation...</div>
+
+    <div class="footer">
+        <span class="credit-line"><strong>Developer:</strong> Tony Wilding</span>
+        <span class="source-line">Powered by the National Hospital Radio Request Archives<br>
+        Historical Data Compiled & Curated by <strong>Mark W Snowdon</strong></span>
+    </div>
 </div>
 
 <script>
@@ -46,11 +55,10 @@
                 };
             });
 
-            // SORT by score and take the top 15% as Power Gold
             allSongs.sort((a, b) => b.score - a.score);
             const powerCount = Math.floor(allSongs.length * 0.15);
-            const tierA = allSongs.slice(0, powerCount); // The elite top scorers
-            const tierC = allSongs.slice(powerCount);    // The rest of the greats
+            const tierA = allSongs.slice(0, powerCount);
+            const tierC = allSongs.slice(powerCount);
 
             let artistHistory = [];
             let html = "";
@@ -63,15 +71,11 @@
                 const quarter = Math.floor(i / 4);
                 const time = `10:${(quarter * 15).toString().padStart(2, '0')}`;
                 
-                // Rotation: Slot 1 of every 15 mins is Power Gold
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
-                
-                // Jumble the selection based on the day to ensure variety
                 let baseIdx = (dayNum * 41 + i) % pool.length;
                 let pick = null;
 
-                // ARTIST SEPARATION: Look ahead up to 50 songs to avoid repeats
                 for (let offset = 0; offset < Math.min(pool.length, 50); offset++) {
                     let candidate = pool[(baseIdx + offset) % pool.length];
                     if (!artistHistory.includes(candidate.artist)) {
@@ -80,10 +84,10 @@
                     }
                 }
                 
-                if (!pick) pick = pool[baseIdx]; // Fallback if list is too small
+                if (!pick) pick = pool[baseIdx];
 
                 artistHistory.push(pick.artist);
-                if (artistHistory.length > 12) artistHistory.shift(); // Don't repeat artist for 12 songs
+                if (artistHistory.length > 12) artistHistory.shift();
 
                 html += `<div class="slot">
                     <span class="time">${time}</span>
