@@ -15,7 +15,7 @@
         .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 80px; text-align: center; }
         .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
         .classic { background: #e1f0ff; color: #004a99; }
-        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.8em; border-top: 1px solid #eee; line-height: 1.6; }
+        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.85em; border-top: 1px solid #eee; line-height: 1.6; }
         
         .download-btn { 
             display: inline-block; 
@@ -46,8 +46,8 @@
     <div id="main-list">Loading All-Time Greats...</div>
 
     <div class="footer">
-        <strong>Developer:</strong> Tony Wilding | <strong>Research:</strong> Mark W Snowdon<br>
-        <span style="color: #7f8c8d; font-style: italic;">National Hospital Radio Request Archives</span>
+        <strong>Developer:</strong> Tony Wilding<br>
+        Compiled & Curated from the National Hospital Radio Charts (Top 40) since 2004 by <strong>Mark W Snowdon</strong>
     </div>
 </div>
 
@@ -127,12 +127,13 @@
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
         let content = `ALL-TIME GREATS PLAYLIST\r\n`;
-        content += `------------------------------\r\n`;
+        content += `-------------------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
             content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
         });
-        content += `------------------------------\r\n`;
-        content += `Data: Mark W Snowdon | Dev: Tony Wilding`;
+        content += `-------------------------------------------\r\n`;
+        content += `Compiled & Curated from the National Hospital Radio Charts (Top 40) since 2004 by Mark W Snowdon\r\n`;
+        content += `System Developer: Tony Wilding`;
         
         const blob = new Blob([content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
