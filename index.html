@@ -6,16 +6,7 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #004a99; color: white; padding: 30px 20px; text-align: center; position: relative; }
-        
-        /* Verification Marker */
-        .logic-marker { 
-            position: absolute; top: 10px; right: 10px; 
-            background: #2ecc71; color: white; font-size: 0.7em; 
-            padding: 4px 8px; border-radius: 20px; font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
+        .header { background: #004a99; color: white; padding: 30px 20px; text-align: center; }
         .slot { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #eee; }
         .num { width: 35px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.6; }
         .details { flex-grow: 1; }
@@ -42,12 +33,11 @@
 
 <div class="card">
     <div class="header">
-        <div class="logic-marker">V2: HORIZONTAL SHIFT ACTIVE</div>
         <h1 style="margin:0; font-size: 1.8em; letter-spacing: 2px;">ALL-TIME GREATS</h1>
         <button class="download-btn" onclick="downloadPlaylist()">📥 Download Playlist (.txt)</button>
     </div>
     
-    <div id="main-list">Loading New Logic Engine...</div>
+    <div id="main-list">Loading All-Time Greats...</div>
 
     <div class="footer">
         <strong>Developer:</strong> Tony Wilding<br>
@@ -84,7 +74,7 @@
                 };
             });
 
-            // TIER DEFINITIONS
+            // TIER DEFINITIONS based on new data
             let tierA = allSongs.filter(s => s.peak <= 5 && s.score > 500); 
             let tierB = allSongs.filter(s => (s.peak > 5 && s.peak <= 20) || (s.score >= 250 && s.score <= 500));
             let tierC = allSongs.filter(s => !tierA.includes(s) && !tierB.includes(s));
@@ -102,11 +92,11 @@
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
                 
-                // Rotation: A, B, C, B (repeat) - ensures variety in tier distribution
                 let pool;
                 let tierLabel;
                 let tierClass;
 
+                // Rotation pattern for pacing
                 if (i % 4 === 0) {
                     pool = tierA; tierLabel = "Power Gold"; tierClass = "tier-a";
                 } else if (i % 2 === 0) {
@@ -126,20 +116,17 @@
                     const isModern = s.year >= 1990;
                     const eraShift = (isModern !== lastEraWasModern);
 
-                    // Selection logic with Horizontal Shift
                     if (!artistRepeat && !genderOverload) {
                         pick = s;
                         pickIndex = j;
-                        if (eraShift) break; // Perfect match found
+                        if (eraShift) break; 
                     }
                 }
 
-                // Fallback
                 if (!pick) { pickIndex = 0; pick = pool[pickIndex]; }
 
                 pool.splice(pickIndex, 1);
 
-                // Update constraints
                 artistHistory.push(pick.artist);
                 if (artistHistory.length > 5) artistHistory.shift();
                 genderHistory.push(pick.gender);
@@ -165,13 +152,13 @@
             document.getElementById('main-list').innerHTML = html;
         } catch (e) {
             console.error(e);
-            document.getElementById('main-list').innerHTML = "Error loading new data structure.";
+            document.getElementById('main-list').innerHTML = "Error syncing with new data structure.";
         }
     }
 
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
-        let content = `ALL-TIME GREATS PLAYLIST (V2 LOGIC)\r\n`;
+        let content = `ALL-TIME GREATS PLAYLIST\r\n`;
         content += `-------------------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
             content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.tier}]\r\n`;
@@ -184,7 +171,7 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `All_Time_Greats_Playlist_V2.txt`;
+        a.download = `All_Time_Greats_Playlist.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
