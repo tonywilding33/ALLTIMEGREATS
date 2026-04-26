@@ -6,31 +6,34 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #004a99; color: white; padding: 30px 20px; text-align: center; }
+        .header { background: #004a99; color: white; padding: 30px 20px; text-align: center; position: relative; }
+        
+        /* Verification Marker */
+        .logic-marker { 
+            position: absolute; top: 10px; right: 10px; 
+            background: #2ecc71; color: white; font-size: 0.7em; 
+            padding: 4px 8px; border-radius: 20px; font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         .slot { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #eee; }
         .num { width: 35px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.6; }
         .details { flex-grow: 1; }
         .artist { font-weight: bold; color: #222; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
         .title { color: #555; font-size: 0.95em; }
-        .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 80px; text-align: center; }
-        .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
-        .classic { background: #e1f0ff; color: #004a99; }
-        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.85em; border-top: 1px solid #eee; line-height: 1.6; }
         
+        /* Tier Tags */
+        .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 90px; text-align: center; }
+        .tier-a { background: #ffd700; color: #000; border: 1px solid #b8860b; } /* Power Gold */
+        .tier-b { background: #e67e22; color: #fff; } /* Heavy */
+        .tier-c { background: #e1f0ff; color: #004a99; } /* Medium */
+
+        .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.85em; border-top: 1px solid #eee; line-height: 1.6; }
         .download-btn { 
-            display: inline-block; 
-            margin-top: 15px; 
-            padding: 10px 20px; 
-            background: #ffffff; 
-            color: #004a99; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            font-size: 0.85em;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: all 0.2s;
+            display: inline-block; margin-top: 15px; padding: 10px 20px; 
+            background: #ffffff; color: #004a99; text-decoration: none; 
+            border-radius: 6px; font-weight: bold; font-size: 0.85em;
+            cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.2s;
         }
         .download-btn:hover { background: #e1f0ff; transform: translateY(-1px); }
     </style>
@@ -39,11 +42,12 @@
 
 <div class="card">
     <div class="header">
+        <div class="logic-marker">V2: HORIZONTAL SHIFT ACTIVE</div>
         <h1 style="margin:0; font-size: 1.8em; letter-spacing: 2px;">ALL-TIME GREATS</h1>
         <button class="download-btn" onclick="downloadPlaylist()">📥 Download Playlist (.txt)</button>
     </div>
     
-    <div id="main-list">Loading All-Time Greats...</div>
+    <div id="main-list">Loading New Logic Engine...</div>
 
     <div class="footer">
         <strong>Developer:</strong> Tony Wilding<br>
@@ -73,17 +77,17 @@
                 return { 
                     artist: c[0].replace(/"/g, "").trim(), 
                     title: c[1].replace(/"/g, "").trim(),
-                    score: parseInt(c[24]) || 0,
-                    peak: parseInt(c[27]) || 99,
-                    gender: (c[28] || "M").trim().toUpperCase(),
-                    year: parseInt(c[29]) || 2000
+                    score: parseInt(c[24]) || 0,       // Col Y
+                    peak: parseInt(c[27]) || 99,      // Col AB
+                    gender: (c[28] || "M").trim().toUpperCase(), // Col AC
+                    year: parseInt(c[29]) || 0         // Col AD
                 };
             });
 
-            // TIER LOGIC (Horizontal Shift Tiers)
-            let tierA = allSongs.filter(s => s.peak <= 5 && s.score > 500); // Power Gold
-            let tierB = allSongs.filter(s => (s.peak > 5 && s.peak <= 20) || (s.score >= 250 && s.score <= 500)); // Heavy
-            let tierC = allSongs.filter(s => !tierA.includes(s) && !tierB.includes(s)); // Medium/Classic
+            // TIER DEFINITIONS
+            let tierA = allSongs.filter(s => s.peak <= 5 && s.score > 500); 
+            let tierB = allSongs.filter(s => (s.peak > 5 && s.peak <= 20) || (s.score >= 250 && s.score <= 500));
+            let tierC = allSongs.filter(s => !tierA.includes(s) && !tierB.includes(s));
 
             shuffleArray(tierA);
             shuffleArray(tierB);
@@ -91,91 +95,96 @@
 
             let artistHistory = [];
             let genderHistory = [];
-            let lastYear = 0;
+            let lastEraWasModern = false;
             let html = "";
             currentPlaylistData = []; 
 
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
                 
-                // Select pool based on rotation pattern (Every 4th is a Tier A Power hit)
-                let isPower = (i % 4 === 0);
-                let pool = isPower ? tierA : (i % 2 === 0 ? tierB : tierC);
+                // Rotation: A, B, C, B (repeat) - ensures variety in tier distribution
+                let pool;
+                let tierLabel;
+                let tierClass;
+
+                if (i % 4 === 0) {
+                    pool = tierA; tierLabel = "Power Gold"; tierClass = "tier-a";
+                } else if (i % 2 === 0) {
+                    pool = tierB; tierLabel = "Heavy"; tierClass = "tier-b";
+                } else {
+                    pool = tierC; tierLabel = "Medium"; tierClass = "tier-c";
+                }
                 
                 let pick = null;
                 let pickIndex = -1;
 
                 for (let j = 0; j < pool.length; j++) {
-                    const song = pool[j];
+                    const s = pool[j];
                     
-                    // Logic: Avoid same artist in last 5, same gender > 2 times, and shift Eras
-                    const artistMatch = artistHistory.includes(song.artist);
-                    const genderMatch = genderHistory.filter(g => g === song.gender).length >= 2;
-                    const eraShift = (lastYear < 1990 && song.year < 1990) || (lastYear >= 1990 && song.year >= 1990);
+                    const artistRepeat = artistHistory.includes(s.artist);
+                    const genderOverload = genderHistory.length >= 2 && genderHistory.every(g => g === s.gender);
+                    const isModern = s.year >= 1990;
+                    const eraShift = (isModern !== lastEraWasModern);
 
-                    if (!artistMatch && !genderMatch) {
-                        pick = song;
+                    // Selection logic with Horizontal Shift
+                    if (!artistRepeat && !genderOverload) {
+                        pick = s;
                         pickIndex = j;
-                        // Preference for era shifting, but don't break the loop if not perfect
-                        if (!eraShift) break; 
+                        if (eraShift) break; // Perfect match found
                     }
                 }
 
-                if (!pick) {
-                    pickIndex = 0;
-                    pick = pool[pickIndex];
-                }
+                // Fallback
+                if (!pick) { pickIndex = 0; pick = pool[pickIndex]; }
 
                 pool.splice(pickIndex, 1);
 
-                // Update Histories for Horizontal Shifting
+                // Update constraints
                 artistHistory.push(pick.artist);
                 if (artistHistory.length > 5) artistHistory.shift();
-                
                 genderHistory.push(pick.gender);
                 if (genderHistory.length > 2) genderHistory.shift();
-
-                lastYear = pick.year;
+                lastEraWasModern = (pick.year >= 1990);
 
                 currentPlaylistData.push({
                     id: countNum,
                     artist: pick.artist,
                     title: pick.title,
-                    type: isPower ? 'POWER' : 'CLASSIC'
+                    tier: tierLabel
                 });
 
                 html += `<div class="slot">
                     <span class="num">${countNum}</span>
                     <div class="details">
                         <span class="artist">${pick.artist}</span>
-                        <span class="title">${pick.title}</span>
+                        <span class="title">${pick.title} (${pick.year})</span>
                     </div>
-                    <span class="tag ${isPower ? 'power' : 'classic'}">${isPower ? '⚡ Power' : 'Classic'}</span>
+                    <span class="tag ${tierClass}">${tierLabel}</span>
                 </div>`;
             }
             document.getElementById('main-list').innerHTML = html;
         } catch (e) {
             console.error(e);
-            document.getElementById('main-list').innerHTML = "Error loading data. Check console for details.";
+            document.getElementById('main-list').innerHTML = "Error loading new data structure.";
         }
     }
 
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
-        let content = `ALL-TIME GREATS PLAYLIST\r\n`;
+        let content = `ALL-TIME GREATS PLAYLIST (V2 LOGIC)\r\n`;
         content += `-------------------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
-            content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
+            content += `${song.id}. ${song.artist.toUpperCase()} - ${song.title} [${song.tier}]\r\n`;
         });
         content += `-------------------------------------------\r\n`;
-        content += `From the National Hospital Radio Request Charts (Top 40) since 2004, curated by Mark W Snowdon\r\n`;
+        content += `National Hospital Radio Charts - Curated by Mark W Snowdon\r\n`;
         content += `System Developer: Tony Wilding`;
         
         const blob = new Blob([content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `All_Time_Greats_Playlist.txt`;
+        a.download = `All_Time_Greats_Playlist_V2.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
