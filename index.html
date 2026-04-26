@@ -8,7 +8,7 @@
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
         .header { background: #004a99; color: white; padding: 20px; text-align: center; }
         .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
-        .time { width: 60px; font-weight: bold; color: #004a99; font-size: 0.9em; }
+        .time { width: 60px; font-weight: bold; color: #004a99; font-size: 1.1em; }
         .details { flex-grow: 1; }
         .artist { font-weight: bold; color: #222; display: block; }
         .title { color: #666; font-size: 0.9em; }
@@ -24,7 +24,7 @@
 
 <div class="card">
     <div class="header">
-        <h2 style="margin:0;">📻 10:00 AM - 11:00 AM Hour</h2>
+        <h2 style="margin:0;">📻 All-Time Greats Hourly Clock</h2>
         <div id="day-info" style="opacity:0.8; font-size: 0.9em; margin-top: 5px;"></div>
     </div>
     
@@ -65,11 +65,12 @@
             const today = new Date();
             const dayNum = today.getDay();
             const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            document.getElementById('day-info').innerText = days[dayNum] + " Rotation";
+            document.getElementById('day-info').innerText = days[dayNum] + " Sequence";
 
             for (let i = 0; i < 16; i++) {
                 const quarter = Math.floor(i / 4);
-                const time = `10:${(quarter * 15).toString().padStart(2, '0')}`;
+                // Displays as :00, :15, :30, :45
+                const timeLabel = ":" + (quarter * 15).toString().padStart(2, '0');
                 
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
@@ -90,7 +91,7 @@
                 if (artistHistory.length > 12) artistHistory.shift();
 
                 html += `<div class="slot">
-                    <span class="time">${time}</span>
+                    <span class="time">${timeLabel}</span>
                     <div class="details">
                         <span class="artist">${pick.artist}</span>
                         <span class="title">${pick.title}</span>
