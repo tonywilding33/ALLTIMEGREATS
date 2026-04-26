@@ -2,102 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Radio - 1 Hour Playlist</title>
+    <title>Radio Scheduler V1.1</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
-        .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .header { background: #004a99; color: white; padding: 20px; text-align: center; border-radius: 12px 12px 0 0; }
-        .content { padding: 20px; }
-        .slot { border-left: 5px solid #3498db; background: #f8f9fa; margin-bottom: 8px; padding: 12px; border-radius: 0 8px 8px 0; display: flex; align-items: center; }
-        .time { font-weight: bold; color: #004a99; width: 60px; font-size: 0.9em; }
-        .song-details { flex-grow: 1; }
-        .artist { font-weight: bold; display: block; }
-        .title { font-size: 0.95em; color: #555; }
-        .tag { font-size: 0.7em; background: #e1f0ff; color: #004a99; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: #004a99; color: white; padding: 20px; text-align: center; }
+        .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+        .time { width: 60px; font-weight: bold; color: #004a99; }
+        .artist { font-weight: bold; margin-right: 5px; }
+        .tag { margin-left: auto; font-size: 0.7em; background: #e1f0ff; padding: 3px 8px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="header">
-        <h2 style="margin:0;">📻 10:00 - 11:00 AM Hour</h2>
-        <div id="day-label" style="opacity:0.8;"></div>
-    </div>
-    <div class="content" id="playlist">Generating fresh rotation...</div>
+    <div class="header"><h2 style="margin:0;">10:00 AM - 11:00 AM</h2></div>
+    <div id="main-list">Loading 16 unique songs...</div>
 </div>
 
 <script>
-    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?v=' + Date.now();
+    // The "Date.now()" at the end forces GitHub to send the freshest CSV every single time
+    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?nocache=' + Date.now();
 
     async function start() {
         try {
-            const response = await fetch(csvUrl);
-            const text = await response.text();
-            const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+            const res = await fetch(csvUrl);
+            const text = await res.text();
+            const rows = text.split(/\r?\n/).filter(r => r.trim() !== "").slice(1);
             
-            let tierA = []; 
-            let tierC = [];
+            let songs = rows.map(r => {
+                const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                return { 
+                    artist: c[0].replace(/"/g, "").trim(), 
+                    title: c[1].replace(/"/g, "").trim(),
+                    score: parseInt(c[c.length-4]) || 0 
+                };
+            });
 
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (cols.length < 5) continue;
+            const tierA = songs.filter(s => s.score > 600);
+            const tierC = songs.filter(s => s.score <= 600);
 
-                const artist = cols[0].replace(/"/g, "").trim();
-                const title = cols[1].replace(/"/g, "").trim();
-                const score = parseInt(cols[cols.length - 4]) || 0;
-
-                if (score > 600) tierA.push({ artist, title }); 
-                else tierC.push({ artist, title });
-            }
-
-            const dayNum = new Date().getDay();
-            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            document.getElementById('day-label').innerText = days[dayNum];
-
+            let artistHistory = [];
             let html = "";
-            let artistHistory = []; // Keeps track of ALL artists used in this hour
+            const dayNum = new Date().getDay();
 
-            // We need 16 songs total
-            for (let q = 0; q < 4; q++) {
-                for (let s = 0; s < 4; s++) {
-                    const time = `10:${(q * 15).toString().padStart(2, '0')}`;
-                    let pool = (s === 0) ? tierA : tierC;
-                    let type = (s === 0) ? "Gold" : "Classic";
-                    
-                    // Math + Aggressive Artist Separation
-                    let baseIdx = (dayNum * 31 + q * 4 + s) % pool.length;
-                    let selectedSong = null;
+            // FORCE 16 SLOTS (4 per quarter hour)
+            for (let i = 0; i < 16; i++) {
+                const quarter = Math.floor(i / 4);
+                const time = `10:${(quarter * 15).toString().padStart(2, '0')}`;
+                
+                // Pick Gold for the start of every quarter, otherwise Classic
+                let pool = (i % 4 === 0) ? tierA : tierC;
+                let type = (i % 4 === 0) ? "GOLD" : "CLASSIC";
+                
+                let baseIdx = (dayNum * 37 + i) % pool.length;
+                let pick = null;
 
-                    // Search through the pool to find an artist NOT in the history
-                    for (let offset = 0; offset < pool.length; offset++) {
-                        let candidate = pool[(baseIdx + offset) % pool.length];
-                        if (!artistHistory.includes(candidate.artist)) {
-                            selectedSong = candidate;
-                            break;
-                        }
+                // Loop through the pool until we find a non-repeated artist
+                for (let offset = 0; offset < pool.length; offset++) {
+                    let candidate = pool[(baseIdx + offset) % pool.length];
+                    if (!artistHistory.includes(candidate.artist)) {
+                        pick = candidate;
+                        break;
                     }
-
-                    // Emergency Fallback: If everyone in the pool has played (very small list), allow a repeat
-                    if (!selectedSong) selectedSong = pool[baseIdx];
-
-                    artistHistory.push(selectedSong.artist);
-
-                    html += `
-                        <div class="slot">
-                            <span class="time">${time}</span>
-                            <div class="song-details">
-                                <span class="artist">${selectedSong.artist}</span>
-                                <span class="title">${selectedSong.title}</span>
-                            </div>
-                            <span class="tag">${type}</span>
-                        </div>`;
                 }
-            }
-            document.getElementById('playlist').innerHTML = html;
+                
+                // If the library is too small to avoid a repeat, just take the base pick
+                if (!pick) pick = pool[baseIdx];
 
+                artistHistory.push(pick.artist);
+                // Only allow an artist to repeat after 10 other songs have played
+                if (artistHistory.length > 10) artistHistory.shift();
+
+                html += `<div class="slot">
+                    <span class="time">${time}</span>
+                    <span class="artist">${pick.artist}</span>
+                    <span class="title">- ${pick.title}</span>
+                    <span class="tag">${type}</span>
+                </div>`;
+            }
+            document.getElementById('main-list').innerHTML = html;
         } catch (e) {
-            document.getElementById('playlist').innerHTML = "⚠️ Database Sync Error.";
+            document.getElementById('main-list').innerHTML = "Error: " + e.message;
         }
     }
     start();
