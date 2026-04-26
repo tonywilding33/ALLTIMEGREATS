@@ -8,7 +8,7 @@
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
         .header { background: #004a99; color: white; padding: 20px; text-align: center; position: relative; }
         .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
-        .time { width: 60px; font-weight: bold; color: #004a99; font-size: 1.1em; }
+        .num { width: 40px; font-weight: bold; color: #004a99; font-size: 1.1em; opacity: 0.7; }
         .details { flex-grow: 1; }
         .artist { font-weight: bold; color: #222; display: block; }
         .title { color: #666; font-size: 0.9em; }
@@ -16,10 +16,7 @@
         .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
         .classic { background: #e1f0ff; color: #004a99; }
         .footer { background: #f8f9fa; color: #555; padding: 20px; text-align: center; font-size: 0.8em; border-top: 1px solid #eee; line-height: 1.5; }
-        .credit-line { display: block; margin-bottom: 4px; }
-        .source-line { color: #7f8c8d; font-style: italic; }
         
-        /* New Styles for Download Button */
         .download-btn { 
             display: inline-block; 
             margin-top: 15px; 
@@ -41,23 +38,22 @@
 
 <div class="card">
     <div class="header">
-        <h2 style="margin:0;">📻 All-Time Greats Hourly Clock</h2>
+        <h2 style="margin:0;">📻 All-Time Greats Hourly List</h2>
         <div id="day-info" style="opacity:0.8; font-size: 0.9em; margin-top: 5px;"></div>
-        <button class="download-btn" onclick="downloadPlaylist()">📥 Download Playlist (.txt)</button>
+        <button class="download-btn" onclick="downloadPlaylist()">📥 Download Text List</button>
     </div>
     
     <div id="main-list">Loading rotation...</div>
 
     <div class="footer">
-        <span class="credit-line"><strong>Developer:</strong> Tony Wilding</span>
-        <span class="source-line">Powered by the National Hospital Radio Request Archives<br>
-        Historical Data Compiled & Curated by <strong>Mark W Snowdon</strong></span>
+        <strong>Developer:</strong> Tony Wilding | <strong>Research:</strong> Mark W Snowdon<br>
+        <span style="color: #7f8c8d; font-style: italic;">Powered by the National Hospital Radio Request Archives</span>
     </div>
 </div>
 
 <script>
     const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?nocache=' + Date.now();
-    let currentPlaylistData = []; // Global variable to store current view for download
+    let currentPlaylistData = [];
 
     async function start() {
         try {
@@ -81,16 +77,15 @@
 
             let artistHistory = [];
             let html = "";
-            currentPlaylistData = []; // Clear previous
+            currentPlaylistData = []; 
             
             const today = new Date();
             const dayNum = today.getDay();
             const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            document.getElementById('day-info').innerText = days[dayNum] + " Sequence";
+            document.getElementById('day-info').innerText = days[dayNum] + " Rotation";
 
             for (let i = 0; i < 16; i++) {
-                const quarter = Math.floor(i / 4);
-                const timeLabel = ":" + (quarter * 15).toString().padStart(2, '0');
+                const countNum = (i + 1).toString().padStart(2, '0');
                 
                 let isPower = (i % 4 === 0);
                 let pool = isPower ? tierA : tierC;
@@ -110,16 +105,15 @@
                 artistHistory.push(pick.artist);
                 if (artistHistory.length > 12) artistHistory.shift();
 
-                // Store for download
                 currentPlaylistData.push({
-                    time: timeLabel,
+                    id: countNum,
                     artist: pick.artist,
                     title: pick.title,
-                    type: isPower ? 'POWER GOLD' : 'CLASSIC'
+                    type: isPower ? 'POWER' : 'GOLD'
                 });
 
                 html += `<div class="slot">
-                    <span class="time">${timeLabel}</span>
+                    <span class="num">${countNum}</span>
                     <div class="details">
                         <span class="artist">${pick.artist}</span>
                         <span class="title">${pick.title}</span>
@@ -135,25 +129,17 @@
 
     function downloadPlaylist() {
         if (currentPlaylistData.length === 0) return;
-
-        const timestamp = new Date().toLocaleDateString();
-        let content = `HOSPITAL RADIO - ALL TIME GREATS PLAYLIST\r\n`;
-        content += `Generated: ${timestamp}\r\n`;
-        content += `-------------------------------------------\r\n\r\n`;
-
+        let content = `HOSPITAL RADIO PLAYLIST - ${new Date().toLocaleDateString()}\r\n`;
+        content += `-------------------------------------------\r\n`;
         currentPlaylistData.forEach(song => {
-            content += `${song.time} | ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
+            content += `${song.id} | ${song.artist.toUpperCase()} - ${song.title} [${song.type}]\r\n`;
         });
-
-        content += `\r\n-------------------------------------------\r\n`;
-        content += `Historical Data by Mark W Snowdon\r\n`;
-        content += `System by Tony Wilding`;
-
+        content += `-------------------------------------------\r\n`;
         const blob = new Blob([content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Hospital_Radio_Playlist_${new Date().toISOString().slice(0,10)}.txt`;
+        a.download = `Playlist_List.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
