@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Radio - All Time Greats</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; }
+        .card { max-width: 500px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: #004a99; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .slot { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; align-items: center; }
+        .slot:last-child { border: none; }
+        .time { font-weight: bold; width: 60px; color: #004a99; }
+        .song-info { flex-grow: 1; }
+        .artist { display: block; font-weight: 600; font-size: 1.1em; }
+        .title { color: #555; }
+        .tag { font-size: 0.7em; background: #e1f0ff; color: #004a99; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h2 style="margin:0;">📻 Hospital Radio Schedule</h2>
+        <p id="current-day" style="margin:5px 0 0 0; opacity: 0.8;"></p>
+    </div>
+    <div class="content" id="playlist-container">
+        Loading All Time Greats...
+    </div>
+</div>
+
+<script>
+    const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
+
+    async function generatePlaylist() {
+        try {
+            const response = await fetch(csvUrl);
+            const data = await response.text();
+            const lines = data.split('\n').filter(line => line.trim() !== "");
+            const rows = lines.slice(1); // Skip header
+
+            let tierA = []; // High Scoring Gold
+            let tierC = []; // General Classics
+
+            rows.forEach(line => {
+                const cols = line.split(',');
+                // CSV columns: Artist(0), Song(1) ... Total Score is usually 4th from last
+                const song = {
+                    artist: cols[0],
+                    title: cols[1],
+                    score: parseInt(cols[cols.length - 4]) || 0
+                };
+
+                if (song.score > 600) tierA.push(song);
+                else tierC.push(song);
+            });
+
+            // Logic: Horizontal Shift based on Day of Week (0-6)
+            const today = new Date();
+            const dayNum = today.getDay();
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            document.getElementById('current-day').innerText = days[dayNum] + " 10:00 AM Hour";
+
+            let html = "";
+            for (let i = 0; i < 4; i++) {
+                const timeStr = "10:" + (i * 15 === 0 ? "00" : i * 15);
+                
+                // MATH: (Day * Offset + Slot) rotates the song selection horizontally across the week
+                const goldIdx = (dayNum * 7 + i) % tierA.length;
+                const classicIdx = (dayNum * 3 + i) % tierC.length;
+
+                const goldSong = tierA[goldIdx];
+                const classicSong = tierC[classicIdx];
+
+                html += `
+                <div class="slot">
+                    <div class="time">${timeStr}</div>
+                    <div class="song-info">
+                        <span class="artist">${goldSong.artist}<span class="tag">Power Gold</span></span>
+                        <span class="title">${goldSong.title}</span>
+                        <div style="margin-top:8px;">
+                            <span class="artist" style="font-size:0.9em;">${classicSong.artist}<span class="tag" style="background:#eee;color:#666;">Classic</span></span>
+                            <span class="title" style="font-size:0.9em;">${classicSong.title}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            document.getElementById('playlist-container').innerHTML = html;
+
+        } catch (error) {
+            document.getElementById('playlist-container').innerHTML = "Check connection to GitHub data.";
+        }
+    }
+
+    generatePlaylist();
+</script>
+
+</body>
+</html>
