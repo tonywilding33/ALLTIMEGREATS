@@ -2,26 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Radio Scheduler V1.1</title>
+    <title>Radio Scheduler V1.2</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; }
         .card { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
         .header { background: #004a99; color: white; padding: 20px; text-align: center; }
-        .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
-        .time { width: 60px; font-weight: bold; color: #004a99; }
-        .artist { font-weight: bold; margin-right: 5px; }
-        .tag { margin-left: auto; font-size: 0.7em; background: #e1f0ff; padding: 3px 8px; border-radius: 4px; }
+        .slot { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; transition: background 0.2s; }
+        .slot:hover { background: #f9f9f9; }
+        .time { width: 60px; font-weight: bold; color: #004a99; font-size: 0.9em; }
+        .details { flex-grow: 1; }
+        .artist { font-weight: bold; color: #222; display: block; }
+        .title { color: #666; font-size: 0.9em; }
+        .tag { font-size: 0.65em; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 10px; min-width: 80px; text-align: center; }
+        .power { background: #ffd700; color: #000; border: 1px solid #b8860b; }
+        .classic { background: #e1f0ff; color: #004a99; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="header"><h2 style="margin:0;">10:00 AM - 11:00 AM</h2></div>
-    <div id="main-list">Loading 16 unique songs...</div>
+    <div class="header">
+        <h2 style="margin:0;">📻 10:00 AM Hour</h2>
+        <div id="day-info" style="opacity:0.8; font-size: 0.9em;"></div>
+    </div>
+    <div id="main-list">Loading unique playlist...</div>
 </div>
 
 <script>
-    // The "Date.now()" at the end forces GitHub to send the freshest CSV every single time
     const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?nocache=' + Date.now();
 
     async function start() {
@@ -30,7 +37,7 @@
             const text = await res.text();
             const rows = text.split(/\r?\n/).filter(r => r.trim() !== "").slice(1);
             
-            let songs = rows.map(r => {
+            let allSongs = rows.map(r => {
                 const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 return { 
                     artist: c[0].replace(/"/g, "").trim(), 
@@ -39,27 +46,33 @@
                 };
             });
 
-            const tierA = songs.filter(s => s.score > 600);
-            const tierC = songs.filter(s => s.score <= 600);
+            // SORT by score and take the top 15% as Power Gold
+            allSongs.sort((a, b) => b.score - a.score);
+            const powerCount = Math.floor(allSongs.length * 0.15);
+            const tierA = allSongs.slice(0, powerCount); // The elite top scorers
+            const tierC = allSongs.slice(powerCount);    // The rest of the greats
 
             let artistHistory = [];
             let html = "";
-            const dayNum = new Date().getDay();
+            const today = new Date();
+            const dayNum = today.getDay();
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            document.getElementById('day-info').innerText = days[dayNum] + " Rotation";
 
-            // FORCE 16 SLOTS (4 per quarter hour)
             for (let i = 0; i < 16; i++) {
                 const quarter = Math.floor(i / 4);
                 const time = `10:${(quarter * 15).toString().padStart(2, '0')}`;
                 
-                // Pick Gold for the start of every quarter, otherwise Classic
-                let pool = (i % 4 === 0) ? tierA : tierC;
-                let type = (i % 4 === 0) ? "GOLD" : "CLASSIC";
+                // Rotation: Slot 1 of every 15 mins is Power Gold
+                let isPower = (i % 4 === 0);
+                let pool = isPower ? tierA : tierC;
                 
-                let baseIdx = (dayNum * 37 + i) % pool.length;
+                // Jumble the selection based on the day to ensure variety
+                let baseIdx = (dayNum * 41 + i) % pool.length;
                 let pick = null;
 
-                // Loop through the pool until we find a non-repeated artist
-                for (let offset = 0; offset < pool.length; offset++) {
+                // ARTIST SEPARATION: Look ahead up to 50 songs to avoid repeats
+                for (let offset = 0; offset < Math.min(pool.length, 50); offset++) {
                     let candidate = pool[(baseIdx + offset) % pool.length];
                     if (!artistHistory.includes(candidate.artist)) {
                         pick = candidate;
@@ -67,18 +80,18 @@
                     }
                 }
                 
-                // If the library is too small to avoid a repeat, just take the base pick
-                if (!pick) pick = pool[baseIdx];
+                if (!pick) pick = pool[baseIdx]; // Fallback if list is too small
 
                 artistHistory.push(pick.artist);
-                // Only allow an artist to repeat after 10 other songs have played
-                if (artistHistory.length > 10) artistHistory.shift();
+                if (artistHistory.length > 12) artistHistory.shift(); // Don't repeat artist for 12 songs
 
                 html += `<div class="slot">
                     <span class="time">${time}</span>
-                    <span class="artist">${pick.artist}</span>
-                    <span class="title">- ${pick.title}</span>
-                    <span class="tag">${type}</span>
+                    <div class="details">
+                        <span class="artist">${pick.artist}</span>
+                        <span class="title">${pick.title}</span>
+                    </div>
+                    <span class="tag ${isPower ? 'power' : 'classic'}">${isPower ? '⚡ Power Gold' : 'Classic'}</span>
                 </div>`;
             }
             document.getElementById('main-list').innerHTML = html;
