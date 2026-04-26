@@ -52,11 +52,9 @@
 </div>
 
 <script>
-    // Added nocache to ensure fresh data and randomizing logic
     const csvUrl = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv?nocache=' + Date.now();
     let currentPlaylistData = [];
 
-    // Shuffle function to ensure randomness
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -72,64 +70,72 @@
             
             let allSongs = rows.map(r => {
                 const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                let artist = c[0].replace(/"/g, "").trim();
-                let title = c[1].replace(/"/g, "").trim();
-
-                if (artist.toLowerCase().includes("stevie wonder") && title.toLowerCase().includes("i just called")) {
-                    title = "I Just Called to Say I Love You";
-                }
-
                 return { 
-                    artist: artist, 
-                    title: title,
-                    score: parseInt(c[c.length-4]) || 0 
+                    artist: c[0].replace(/"/g, "").trim(), 
+                    title: c[1].replace(/"/g, "").trim(),
+                    score: parseInt(c[24]) || 0,
+                    peak: parseInt(c[27]) || 99,
+                    gender: (c[28] || "M").trim().toUpperCase(),
+                    year: parseInt(c[29]) || 2000
                 };
             });
 
-            // Sort by score first to separate Tiers
-            allSongs.sort((a, b) => b.score - a.score);
-            
-            const powerLimit = Math.floor(allSongs.length * 0.15);
-            let tierA = allSongs.slice(0, powerLimit);
-            let tierC = allSongs.slice(powerLimit);
+            // TIER LOGIC (Horizontal Shift Tiers)
+            let tierA = allSongs.filter(s => s.peak <= 5 && s.score > 500); // Power Gold
+            let tierB = allSongs.filter(s => (s.peak > 5 && s.peak <= 20) || (s.score >= 250 && s.score <= 500)); // Heavy
+            let tierC = allSongs.filter(s => !tierA.includes(s) && !tierB.includes(s)); // Medium/Classic
 
-            // Shuffle both tiers so the selection is different every refresh
             shuffleArray(tierA);
+            shuffleArray(tierB);
             shuffleArray(tierC);
 
             let artistHistory = [];
+            let genderHistory = [];
+            let lastYear = 0;
             let html = "";
             currentPlaylistData = []; 
 
             for (let i = 0; i < 16; i++) {
                 const countNum = (i + 1).toString().padStart(2, '0');
+                
+                // Select pool based on rotation pattern (Every 4th is a Tier A Power hit)
                 let isPower = (i % 4 === 0);
-                let pool = isPower ? tierA : tierC;
+                let pool = isPower ? tierA : (i % 2 === 0 ? tierB : tierC);
                 
                 let pick = null;
                 let pickIndex = -1;
 
-                // Find a song in the pool that hasn't played recently
                 for (let j = 0; j < pool.length; j++) {
-                    if (!artistHistory.includes(pool[j].artist)) {
-                        pick = pool[j];
+                    const song = pool[j];
+                    
+                    // Logic: Avoid same artist in last 5, same gender > 2 times, and shift Eras
+                    const artistMatch = artistHistory.includes(song.artist);
+                    const genderMatch = genderHistory.filter(g => g === song.gender).length >= 2;
+                    const eraShift = (lastYear < 1990 && song.year < 1990) || (lastYear >= 1990 && song.year >= 1990);
+
+                    if (!artistMatch && !genderMatch) {
+                        pick = song;
                         pickIndex = j;
-                        break;
+                        // Preference for era shifting, but don't break the loop if not perfect
+                        if (!eraShift) break; 
                     }
                 }
 
-                // Fallback if the pool is small or everyone has played
                 if (!pick) {
                     pickIndex = 0;
                     pick = pool[pickIndex];
                 }
 
-                // Remove picked song from the active pool to prevent duplicates in one list
                 pool.splice(pickIndex, 1);
 
-                // Add to history (keep track of last 5 artists to avoid repeats)
+                // Update Histories for Horizontal Shifting
                 artistHistory.push(pick.artist);
                 if (artistHistory.length > 5) artistHistory.shift();
+                
+                genderHistory.push(pick.gender);
+                if (genderHistory.length > 2) genderHistory.shift();
+
+                lastYear = pick.year;
 
                 currentPlaylistData.push({
                     id: countNum,
