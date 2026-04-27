@@ -55,9 +55,13 @@
                     return null;
                 }).filter(row => row !== null && row.artist);
                 
-                generatePlaylist();
+                if (libraryData.length > 0) {
+                    generatePlaylist();
+                } else {
+                    document.getElementById('playlistDisplay').innerText = "Library Empty.";
+                }
             } catch (err) {
-                document.getElementById('playlistDisplay').innerText = "Data Error.";
+                document.getElementById('playlistDisplay').innerText = "Data Connection Error.";
             }
         }
 
@@ -79,7 +83,7 @@
                 });
 
                 if (pool.length === 0) pool = libraryData.filter(r => r.cat === targetCat);
-                if (pool.length === 0) pool = libraryData; // Total fallback to keep it from being empty
+                if (pool.length === 0) pool = libraryData;
 
                 let pick = pool[Math.floor(Math.random() * pool.length)];
 
@@ -106,6 +110,7 @@
 
         function downloadTxt() {
             const content = document.getElementById('playlistDisplay').innerText;
+            if(!content) return;
             const blob = new Blob([content], {type: 'text/plain'});
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
