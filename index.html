@@ -44,10 +44,11 @@
                 const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
                 
                 libraryData = lines.slice(1).map(line => {
-                    let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    const clean = (val) => val ? val.replace(/"/g, '').trim() : "";
+                    // Improved CSV regex to handle commas inside quoted strings correctly
+                    let cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+                    const clean = (val) => val ? val.replace(/^"|"$/g, '').trim() : "";
 
-                    if (cols.length >= 29) { 
+                    if (cols.length >= 2) { 
                         return {
                             artist: clean(cols[0]),
                             title: clean(cols[1]),
