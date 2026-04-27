@@ -6,21 +6,31 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; line-height: 1.6; padding: 20px; background: #f0f2f5; }
         .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid #1a252f; }
-        .status { font-size: 0.9em; color: #546e7a; margin-bottom: 20px; padding: 12px; background: #eef1f2; border-radius: 6px; border: 1px solid #1a252f; font-weight: bold; }
-        h2 { color: #1a252f; margin-top: 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* Centered Header */
+        h2 { color: #1a252f; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 2em; }
+        
+        .status { font-size: 0.9em; color: #546e7a; margin-bottom: 20px; padding: 12px; background: #eef1f2; border-radius: 6px; border: 1px solid #1a252f; font-weight: bold; text-align: center; }
+        
         pre { background: #1a252f; color: #f8f9f9; padding: 25px; border-radius: 6px; font-size: 0.9em; white-space: pre-wrap; border-left: 5px solid #3498db; overflow-x: auto; margin-top: 20px; }
+        
         footer { margin-top: 40px; font-size: 0.85em; color: #7f8c8d; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.8; }
-        .export-btn { background:#2980b9; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        .export-container { text-align: center; margin-top: 15px; }
+        .export-btn { background:#2980b9; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
+
     <div class="box">
         <h2>ALL TIME GREATS</h2>
-        <div id="loadStatus" class="status">Initializing System...</div>
+        <div id="loadStatus" class="status">Connecting to NHRRC Data Hub...</div>
         
         <div id="outputArea">
-            <pre id="playlistDisplay">Generating 60-Minute Air-Log...</pre>
-            <button class="export-btn" onclick="downloadTxt()">Export Schedule (.txt)</button>
+            <pre id="playlistDisplay">Loading Library and Scheduling Show...</pre>
+            <div class="export-container">
+                <button class="export-btn" onclick="downloadTxt()">Export Schedule (.txt)</button>
+            </div>
         </div>
 
         <footer>
@@ -64,13 +74,13 @@
                     return null;
                 }).filter(row => row !== null && row.artist !== "Unknown Artist");
                 
-                document.getElementById('loadStatus').innerHTML = `SYSTEM READY: ${libraryData.length} Tracks Loaded.`;
+                document.getElementById('loadStatus').innerHTML = `SYSTEM ACTIVE: ${libraryData.length} Tracks In Rotation.`;
                 
-                // AUTO-GENERATE ON LOAD
+                // AUTOMATIC EXECUTION
                 generateAdvancedPlaylist();
                 
             } catch (err) {
-                document.getElementById('loadStatus').innerHTML = "ERROR: Failed to load library.";
+                document.getElementById('loadStatus').innerHTML = "SYSTEM ERROR: Check GitHub Source.";
             }
         }
 
@@ -79,11 +89,12 @@
             let playlist = [];
             let artistHistory = []; 
             let genderHistory = []; 
-            let lastEraWasModern = false; 
+            let lastEraWasModern = false; // Post-1980
             
             let currentTime = new Date();
             currentTime.setMinutes(0, 0, 0);
 
+            // 60 Minute Show (16 Slots)
             for (let i = 0; i < 16; i++) {
                 let targetCat = hourPattern[i % hourPattern.length];
                 
@@ -99,16 +110,19 @@
                 if (pool.length === 0) pool = libraryData.filter(r => r.cat === targetCat);
 
                 if (pool.length > 0) {
+                    // Selection logic with Era Shift
                     let pick = pool.find(r => (r.year >= 1980) !== lastEraWasModern) || pool[0];
                     let timeStr = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     
                     playlist.push({ airTime: timeStr, ...pick });
 
+                    // Update Rules History
                     artistHistory.push(pick.artist);
                     genderHistory.push(pick.gender);
                     if (genderHistory.length > 2) genderHistory.shift();
                     lastEraWasModern = (pick.year >= 1980);
                     
+                    // Increment 3:45 per song
                     currentTime.setSeconds(currentTime.getSeconds() + 225);
                 }
             }
@@ -116,15 +130,15 @@
         }
 
         function display(list) {
-            let out = "--- ALL TIME GREATS - MASTER SCHEDULE ---\n";
-            out += "Generated: " + new Date().toLocaleString() + "\n";
-            out += "-----------------------------------------\n\n";
+            let out = "--- ALL TIME GREATS - OFFICIAL AIR-LOG ---\n";
+            out += "Current Shift: 60 Minutes\n";
+            out += "------------------------------------------\n\n";
             
             list.forEach((s, index) => {
                 let slotNum = (index + 1).toString().padStart(2, '0');
                 out += `${slotNum} | [${s.airTime}] ${s.artist.toUpperCase()} - ${s.title}\n`;
-                out += `     TY POS: ${s.tyPos} | CAT: ${s.cat} | YEAR: ${s.year} | GENDER: ${s.gender}\n`;
-                out += `-----------------------------------------\n`;
+                out += `     CHART: #${s.tyPos} | CAT: ${s.cat} | YEAR: ${s.year} | GENDER: ${s.gender}\n`;
+                out += `------------------------------------------\n`;
             });
             
             document.getElementById('playlistDisplay').innerText = out;
@@ -135,10 +149,11 @@
             const blob = new Blob([content], {type: 'text/plain'});
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = "AllTimeGreats_Schedule.txt";
+            a.download = "AllTimeGreats_Log.txt";
             a.click();
         }
 
+        // Auto-fetch on Page Load
         fetchLibrary();
     </script>
 </body>
