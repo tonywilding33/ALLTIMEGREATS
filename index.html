@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALL TIME GREATS - Tight Playlist Manager</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f0f2f5; color: #1a252f; }
+        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid #1a252f; }
+        h2 { color: #1a252f; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+        .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 25px; font-size: 0.9em; text-transform: uppercase; }
+        pre { background: #1a252f; color: #f8f9f9; padding: 25px; border-radius: 6px; font-size: 1.1em; white-space: pre-wrap; border-left: 5px solid #3498db; overflow-x: auto; min-height: 250px; line-height: 1.8; }
+        .controls { text-align: center; margin-top: 20px; }
+        button { background: #2980b9; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button:hover { background: #1a252f; }
+        .info-panel { margin-top: 25px; padding: 15px; background: #eef2f3; border-radius: 8px; font-size: 0.9em; line-height: 1.5; }
+        footer { margin-top: 40px; font-size: 0.85em; color: #7f8c8d; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>ALL TIME GREATS</h2>
+        <div class="subtitle">National Hospital Radio Request Chart: 20 Year Tight Playlist</div>
+        
+        <div id="outputArea">
+            <pre id="playlistDisplay">Initializing 20-year chart database...</pre>
+            <div class="controls">
+                <button onclick="generatePlaylist()">Generate New Show</button>
+                <button onclick="downloadTxt()">Download (.txt)</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <strong>The Tight Playlist Format:</strong> This engine utilizes a curated library of 158 songs that achieved a Top 40 position in the National Hospital Radio Request Charts since 2004. Logic is applied to Column AB (Gender) and Column AC (Year) to prevent clumping and ensure professional rotation.
+        </div>
+
+        <footer>
+            Credits: Developer Tony Wilding<br>
+            Original National Request Chart Data (Top 500) Contributed by Mark W Snowdon
+        </footer>
+    </div>
+
+    <script>
+        const RAW_URL = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
+        let libraryData = [];
+
+        async function fetchLibrary() {
+            try {
+                const response = await fetch(RAW_URL + `?t=${new Date().getTime()}`);
+                const csvText = await response.text();
+                const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
+                
+                libraryData = lines.slice(1).map(line => {
+                    let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const clean = (val) => val ? val.replace(/"/g, '').trim() : "";
+
+                    if (cols.length >= 29) { 
+                        return {
+                            artist: clean(cols[0]),    // Col A
+                            title: clean(cols[1]),     // Col B
+                            score: parseFloat(clean(cols[26])) || 0, // Col AA
+                            gender: clean(cols[27]),   // Col AB
+                            year: parseInt(clean(cols[28])) || 0     // Col AC
+                        };
+                    }
+                    return null;
+                }).filter(r => r && r.artist && r.artist !== "0");
+
+                if (libraryData.length > 0) {
+                    generatePlaylist();
+                } else {
+                    document.getElementById('playlistDisplay').innerText = "Data Mapping Error: Check CSV Columns.";
+                }
+            } catch (err) {
+                document.getElementById('playlistDisplay').innerText = "Connection Error: Check GitHub source.";
+            }
+        }
+
+        function generatePlaylist() {
+            let playlist = [];
+            let artistHistory = [];
+            let genderHistory = [];
+            let lastYear = 0;
+
+            // Sort by score to identify 'Power' tracks
+            const sorted = [...libraryData].sort((a, b) => b.score - a.score);
+
+            for (let i = 0; i < 16; i++) {
+                let pool = sorted.filter(r => {
+                    const artistRepeat = artistHistory.includes(r.artist);
+                    const genderClump = genderHistory.length >= 2 && 
+                                        genderHistory[genderHistory.length-1] === r.gender && 
+                                        genderHistory[genderHistory.length-2] === r.gender;
+                    const eraClump = lastYear !== 0 && Math.abs(r.year - lastYear) < 5;
+                    
+                    return !artistRepeat && !genderClump && !eraClump;
+                });
+
+                if (pool.length === 0) pool = sorted;
+
+                // Pick from a weighted selection (Higher scores picked more often)
+                let pick = pool[Math.floor(Math.random() * Math.min(pool.length, 40))];
+
+                if (pick) {
+                    playlist.push(pick);
+                    artistHistory.push(pick.artist);
+                    genderHistory.push(pick.gender);
+                    lastYear = pick.year;
+                    if (genderHistory.length > 2) genderHistory.shift();
+                }
+            }
+            display(playlist);
+        }
+
+        function display(list) {
+            let out = "";
+            list.forEach((s, index) => {
+                let num = (index + 1).toString().padStart(2, '0');
+                out += `${num} ${s.artist.toUpperCase()} ${s.title}\n`;
+            });
+            document.getElementById('playlistDisplay').innerText = out;
+        }
+
+        function downloadTxt() {
+            const content = document.getElementById('playlistDisplay').innerText;
+            const blob = new Blob([content], {type: 'text/plain'});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "AllTimeGreats_Log.txt";
+            a.click();
+        }
+
+        fetchLibrary();
+    </script>
+</body>
+</html>
