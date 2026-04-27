@@ -81,65 +81,53 @@
         }
 
         function generateAdvancedPlaylist() {
-            // CATEGORY ROTATION
-            const hourPattern = ["A", "B", "A", "C"]; 
+            const hourPattern = ["A", "B", "A", "C"];
             let playlist = [];
             
-            // TRACKING HISTORY
-            let artistHistory = []; 
-            let genderHistory = []; 
-            let lastEraWasModern = false;
+            // New Scheduling Rules - State Tracking
+            let usedArtistsThisShift = [];
+            let genderHistory = [];
+            let lastEraWasModern = false; // "Modern" = 1980 or later
             
             let currentTime = new Date();
             currentTime.setMinutes(0, 0, 0);
 
-            // CLOCK: Generate 20 slots
-            for (let i = 0; i < 20; i++) {
-                let targetCat = hourPattern[i % hourPattern.length];
+            for (let slot = 1; slot <= 20; slot++) {
+                let targetCat = hourPattern[(slot - 1) % hourPattern.length];
                 
-                // 1. FILTER POOL BY CATEGORY
-                let pool = libraryData.filter(r => r.cat === targetCat);
-                
-                let pick = null;
-                let pickIndex = -1;
+                // Primary Filter: Category + Artist Protection + Gender Overload
+                let pool = libraryData.filter(r => {
+                    const isCat = r.cat === targetCat;
+                    const artistRepeat = usedArtistsThisShift.includes(r.artist);
+                    
+                    // Gender Rule: Max 2 in a row
+                    const isGenderOverload = genderHistory.length >= 2 && 
+                                             genderHistory[genderHistory.length-1] === r.gender && 
+                                             genderHistory[genderHistory.length-2] === r.gender;
+                    
+                    return isCat && !artistRepeat && !isGenderOverload;
+                });
 
-                // 2. SELECTION LOOP WITH RULES
-                for (let j = 0; j < pool.length; j++) {
-                    const s = pool[j];
-                    
-                    // Rule: Hard Artist Lock
-                    const artistRepeat = artistHistory.includes(s.artist);
-                    
-                    // Rule: Gender Overload (Max 2 same in a row)
-                    const genderOverload = genderHistory.length >= 2 && 
-                                           genderHistory[genderHistory.length - 1] === s.gender && 
-                                           genderHistory[genderHistory.length - 2] === s.gender;
-                    
-                    // Rule: Era Alternation (Modern is 1980+)
-                    const isModern = s.year >= 1980;
-                    const eraShift = (isModern !== lastEraWasModern);
-
-                    if (!artistRepeat && !genderOverload) {
-                        pick = s;
-                        pickIndex = j;
-                        // If it matches Category + Artist + Gender + Era, take it immediately
-                        if (eraShift) break; 
-                    }
+                // Fallback: If strict rules leave no songs, relax the rules (except category)
+                if (pool.length === 0) {
+                    pool = libraryData.filter(r => r.cat === targetCat);
                 }
 
-                // 3. EMERGENCY FALLBACK (If strict rules yield nothing)
-                if (!pick) {
-                    pick = pool.find(s => !artistHistory.includes(s.artist)) || pool[0];
-                }
-
-                if (pick) {
+                if (pool.length > 0) {
+                    // Era Shift Optimization: Try to alternate Pre-80s and Post-80s
+                    let preferredPick = pool.find(r => (r.year >= 1980) !== lastEraWasModern);
+                    
+                    // If no era shift found, just take the highest score in the pool
+                    let pick = preferredPick || pool.sort((a,b) => b.score - a.score)[0];
+                    
                     let timeStr = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     
                     playlist.push({ airTime: timeStr, ...pick });
 
-                    // 4. UPDATE HISTORY
-                    artistHistory.push(pick.artist);
+                    // Update History trackers
+                    usedArtistsThisShift.push(pick.artist);
                     genderHistory.push(pick.gender);
+                    if (genderHistory.length > 2) genderHistory.shift();
                     lastEraWasModern = (pick.year >= 1980);
                     
                     currentTime.setMinutes(currentTime.getMinutes() + 20);
