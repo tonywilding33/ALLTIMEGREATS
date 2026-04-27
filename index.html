@@ -6,10 +6,16 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f0f2f5; }
         .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid #1a252f; }
-        h2 { color: #1a252f; margin-top: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
-        pre { background: #1a252f; color: #f8f9f9; padding: 25px; border-radius: 6px; font-size: 0.9em; white-space: pre-wrap; border-left: 5px solid #3498db; overflow-x: auto; margin-top: 20px; }
+        
+        /* Centered Title */
+        h2 { color: #1a252f; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+        
+        /* Playlist Area */
+        pre { background: #1a252f; color: #f8f9f9; padding: 25px; border-radius: 6px; font-size: 0.9em; white-space: pre-wrap; border-left: 5px solid #3498db; overflow-x: auto; min-height: 200px; }
+        
         .controls { text-align: center; margin-top: 20px; }
         button { background: #2980b9; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
         footer { margin-top: 40px; font-size: 0.85em; color: #7f8c8d; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.8; }
     </style>
 </head>
@@ -18,7 +24,7 @@
         <h2>ALL TIME GREATS</h2>
         
         <div id="outputArea">
-            <pre id="playlistDisplay"></pre>
+            <pre id="playlistDisplay">Loading playlist data...</pre>
             <div class="controls">
                 <button onclick="downloadTxt()">Download Playlist (.txt)</button>
             </div>
@@ -34,64 +40,74 @@
         const SHEET_URL = 'https://raw.githubusercontent.com/tonywilding33/NHRRC/main/NHRRC%20Data.csv';
         let libraryData = [];
 
+        function fixArtist(name) {
+            if (!name) return "Unknown Artist";
+            let n = name.trim();
+            const needsThe = ["Beatles", "Carpenters", "Animals", "Kinks", "Temptations", "Killers", "Pogues", "Righteous Brothers"];
+            if (needsThe.includes(n)) return "The " + n;
+            return n;
+        }
+
         async function fetchLibrary() {
             try {
                 const response = await fetch(SHEET_URL);
+                if (!response.ok) throw new Error('Network response was not ok');
                 const csvText = await response.text();
-                const lines = csvText.split(/\r?\n/).slice(1);
                 
-                libraryData = lines.map(line => {
+                // Split lines and filter out empty ones
+                const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
+                const dataRows = lines.slice(1); // Skip header
+                
+                libraryData = dataRows.map(line => {
+                    // Split by comma but respect quotes
                     let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 10) {
                         return {
-                            tyPos: cols[0]?.trim(),
-                            artist: cols[1]?.trim(),
-                            title: cols[2]?.trim(),
-                            cat: cols[3]?.trim().toUpperCase(),
-                            year: parseInt(cols[8]?.trim()) || 0,
-                            gender: cols[9]?.trim()
+                            tyPos: cols[0]?.replace(/"/g, '').trim(),
+                            artist: fixArtist(cols[1]?.replace(/"/g, '')),
+                            title: cols[2]?.replace(/"/g, '').trim(),
+                            cat: cols[3]?.replace(/"/g, '').trim().toUpperCase(),
+                            year: cols[8]?.replace(/"/g, '').trim(),
+                            gender: cols[9]?.replace(/"/g, '').trim()
                         };
                     }
                     return null;
-                }).filter(row => row !== null && row.artist);
+                }).filter(row => row !== null && row.artist !== "Unknown Artist");
                 
                 if (libraryData.length > 0) {
                     generatePlaylist();
                 } else {
-                    document.getElementById('playlistDisplay').innerText = "Library Empty.";
+                    document.getElementById('playlistDisplay').innerText = "System Error: No data found in CSV.";
                 }
             } catch (err) {
-                document.getElementById('playlistDisplay').innerText = "Data Connection Error.";
+                document.getElementById('playlistDisplay').innerText = "System Error: Unable to connect to GitHub data.";
+                console.error(err);
             }
         }
 
         function generatePlaylist() {
             const hourPattern = ["A", "B", "A", "C"]; 
             let playlist = [];
-            let artistHistory = []; 
-            let genderHistory = []; 
+            let usedArtists = new Set();
             
+            // Generate 16 slots for a 60-minute show
             for (let i = 0; i < 16; i++) {
                 let targetCat = hourPattern[i % hourPattern.length];
-                let pool = libraryData.filter(r => {
-                    const isCat = r.cat === targetCat;
-                    const artistRepeat = artistHistory.includes(r.artist);
-                    const genderOverload = genderHistory.length >= 2 && 
-                                           genderHistory[genderHistory.length-1] === r.gender && 
-                                           genderHistory[genderHistory.length-2] === r.gender;
-                    return isCat && !artistRepeat && !genderOverload;
-                });
+                
+                // Primary Filter: Category + Artist Protection
+                let pool = libraryData.filter(r => r.cat === targetCat && !usedArtists.has(r.artist));
 
+                // Fallback: Just Category if rules are too tight
                 if (pool.length === 0) pool = libraryData.filter(r => r.cat === targetCat);
+                
+                // Ultimate Fallback: Any song
                 if (pool.length === 0) pool = libraryData;
 
                 let pick = pool[Math.floor(Math.random() * pool.length)];
 
                 if (pick) {
                     playlist.push(pick);
-                    artistHistory.push(pick.artist);
-                    genderHistory.push(pick.gender);
-                    if (genderHistory.length > 2) genderHistory.shift();
+                    usedArtists.add(pick.artist);
                 }
             }
             display(playlist);
@@ -103,14 +119,14 @@
                 let slotNum = (index + 1).toString().padStart(2, '0');
                 out += `${slotNum} | ${s.artist.toUpperCase()} - ${s.title}\n`;
                 out += `     TY POS: ${s.tyPos} | CAT: ${s.cat} | YEAR: ${s.year} | GENDER: ${s.gender}\n`;
-                out += `-----------------------------------------\n`;
+                out += `----------------------------------------------------------\n`;
             });
             document.getElementById('playlistDisplay').innerText = out;
         }
 
         function downloadTxt() {
             const content = document.getElementById('playlistDisplay').innerText;
-            if(!content) return;
+            if (!content || content.includes("Loading")) return;
             const blob = new Blob([content], {type: 'text/plain'});
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
@@ -118,6 +134,7 @@
             a.click();
         }
 
+        // Run automatically
         fetchLibrary();
     </script>
 </body>
