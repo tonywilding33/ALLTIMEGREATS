@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>National Request Radio Scheduler</title>
+    <title>ALL TIME GREATS</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; line-height: 1.6; padding: 20px; background: #f0f2f5; }
         .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid #1a252f; }
@@ -18,11 +18,11 @@
 </head>
 <body>
     <div class="box">
-        <h2>National Request Radio Scheduler</h2>
+        <h2>ALL TIME GREATS</h2>
         <div id="loadStatus" class="status">Initializing System...</div>
         
         <div class="controls">
-            <button id="genBtn" onclick="generateAdvancedPlaylist()" disabled>Generate 20-Min Shift Schedule</button>
+            <button id="genBtn" onclick="generateAdvancedPlaylist()" disabled>Generate 60-Min Show Schedule</button>
         </div>
         
         <div id="outputArea" style="display:none;">
@@ -72,82 +72,73 @@
                     return null;
                 }).filter(row => row !== null && row.artist !== "Unknown Artist");
                 
-                document.getElementById('loadStatus').innerHTML = `SYSTEM READY: ${libraryData.length} Tracks Loaded from Root.`;
+                document.getElementById('loadStatus').innerHTML = `SYSTEM READY: ${libraryData.length} Tracks Loaded.`;
                 document.getElementById('genBtn').disabled = false;
             } catch (err) {
-                document.getElementById('loadStatus').innerHTML = "ERROR: Could not connect to CSV in Root.";
-                console.error(err);
+                document.getElementById('loadStatus').innerHTML = "ERROR: Failed to load library.";
             }
         }
 
         function generateAdvancedPlaylist() {
-            const hourPattern = ["A", "B", "A", "C"];
+            const hourPattern = ["A", "B", "A", "C"]; 
             let playlist = [];
             
-            // New Scheduling Rules - State Tracking
-            let usedArtistsThisShift = [];
-            let genderHistory = [];
-            let lastEraWasModern = false; // "Modern" = 1980 or later
+            // Scheduling Restrictions
+            let artistHistory = []; 
+            let genderHistory = []; 
+            let lastEraWasModern = false; 
             
             let currentTime = new Date();
             currentTime.setMinutes(0, 0, 0);
 
-            for (let slot = 1; slot <= 20; slot++) {
-                let targetCat = hourPattern[(slot - 1) % hourPattern.length];
+            // 60-minute show loop (16 songs)
+            for (let i = 0; i < 16; i++) {
+                let targetCat = hourPattern[i % hourPattern.length];
                 
-                // Primary Filter: Category + Artist Protection + Gender Overload
+                // Rule-based filtering
                 let pool = libraryData.filter(r => {
                     const isCat = r.cat === targetCat;
-                    const artistRepeat = usedArtistsThisShift.includes(r.artist);
-                    
-                    // Gender Rule: Max 2 in a row
-                    const isGenderOverload = genderHistory.length >= 2 && 
-                                             genderHistory[genderHistory.length-1] === r.gender && 
-                                             genderHistory[genderHistory.length-2] === r.gender;
-                    
-                    return isCat && !artistRepeat && !isGenderOverload;
+                    const artistRepeat = artistHistory.includes(r.artist);
+                    const genderOverload = genderHistory.length >= 2 && 
+                                           genderHistory[genderHistory.length-1] === r.gender && 
+                                           genderHistory[genderHistory.length-2] === r.gender;
+                    return isCat && !artistRepeat && !genderOverload;
                 });
 
-                // Fallback: If strict rules leave no songs, relax the rules (except category)
-                if (pool.length === 0) {
-                    pool = libraryData.filter(r => r.cat === targetCat);
-                }
+                // Fallback to Category Only if rules are too tight
+                if (pool.length === 0) pool = libraryData.filter(r => r.cat === targetCat);
 
                 if (pool.length > 0) {
-                    // Era Shift Optimization: Try to alternate Pre-80s and Post-80s
-                    let preferredPick = pool.find(r => (r.year >= 1980) !== lastEraWasModern);
-                    
-                    // If no era shift found, just take the highest score in the pool
-                    let pick = preferredPick || pool.sort((a,b) => b.score - a.score)[0];
+                    // Era Shift (Pre vs Post 1980)
+                    let pick = pool.find(r => (r.year >= 1980) !== lastEraWasModern) || pool[0];
                     
                     let timeStr = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     
                     playlist.push({ airTime: timeStr, ...pick });
 
-                    // Update History trackers
-                    usedArtistsThisShift.push(pick.artist);
+                    // Update History
+                    artistHistory.push(pick.artist);
                     genderHistory.push(pick.gender);
                     if (genderHistory.length > 2) genderHistory.shift();
                     lastEraWasModern = (pick.year >= 1980);
                     
-                    currentTime.setMinutes(currentTime.getMinutes() + 20);
+                    // Song time increment (3m 45s)
+                    currentTime.setSeconds(currentTime.getSeconds() + 225);
                 }
             }
             display(playlist);
         }
 
         function display(list) {
-            let out = "--- NHRRC ADVANCED RADIO SCHEDULE ---\n";
+            let out = "--- ALL TIME GREATS - MASTER SCHEDULE ---\n";
             out += "Generated: " + new Date().toLocaleString() + "\n";
-            out += "Shift Interval: 20 Minutes\n";
-            out += "--------------------------------------\n\n";
+            out += "-----------------------------------------\n\n";
             
             list.forEach((s, index) => {
-                out += `[${s.airTime}] SLOT ${index + 1}\n`;
-                out += `ARTIST: ${s.artist}\n`;
-                out += `SONG:   ${s.title}\n`;
-                out += `DATA:   [Cat: ${s.cat}] [Year: ${s.year}] [Gen: ${s.gender}] [Tempo: ${s.tempo}] [Score: ${s.score}]\n`;
-                out += `--------------------------------------\n`;
+                let slotNum = (index + 1).toString().padStart(2, '0');
+                out += `${slotNum} | [${s.airTime}] ${s.artist.toUpperCase()} - ${s.title}\n`;
+                out += `     TY POS: ${s.tyPos} | CAT: ${s.cat} | YEAR: ${s.year} | GENDER: ${s.gender}\n`;
+                out += `-----------------------------------------\n`;
             });
             
             document.getElementById('playlistDisplay').innerText = out;
@@ -159,7 +150,7 @@
             const blob = new Blob([content], {type: 'text/plain'});
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = "NHRRC_Schedule.txt";
+            a.download = "AllTimeGreats_Schedule.txt";
             a.click();
         }
 
