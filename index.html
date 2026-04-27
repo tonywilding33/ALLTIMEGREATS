@@ -19,7 +19,7 @@
     <div class="box">
         <h2>ALL TIME GREATS</h2>
         <div id="outputArea">
-            <pre id="playlistDisplay">Loading Data...</pre>
+            <pre id="playlistDisplay">Loading Full Artist Names...</pre>
             <div class="controls">
                 <button onclick="generatePlaylist()">Generate New Show</button>
                 <button onclick="downloadTxt()">Download (.txt)</button>
@@ -35,12 +35,15 @@
         const RAW_URL = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
         let libraryData = [];
 
-        function parseCSVLine(line) {
-            // Regex to split by comma but ignore commas inside double quotes
-            const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
-            return line.split(regex).map(field => {
-                return field.replace(/^"|"$/g, '').trim();
-            });
+        // State-machine parser to handle & symbols, spaces, and commas perfectly
+        function parseCSVLine(text) {
+            let p = false, row = [""], i = 0;
+            for (let char of text) {
+                if (char === '"') p = !p;
+                else if (char === ',' && !p) row[++i] = "";
+                else row[i] += char;
+            }
+            return row.map(field => field.trim());
         }
 
         async function fetchLibrary() {
@@ -61,12 +64,12 @@
                         };
                     }
                     return null;
-                }).filter(r => r && r.artist && r.artist !== "0" && r.artist !== "");
+                }).filter(r => r && r.artist && r.artist !== "0");
 
                 if (libraryData.length > 0) {
                     generatePlaylist();
                 } else {
-                    document.getElementById('playlistDisplay').innerText = "Data Error: No valid rows found.";
+                    document.getElementById('playlistDisplay').innerText = "Data Formatting Error.";
                 }
             } catch (err) {
                 document.getElementById('playlistDisplay').innerText = "Connection Error.";
