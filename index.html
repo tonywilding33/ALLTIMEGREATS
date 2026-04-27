@@ -37,6 +37,26 @@
         const RAW_URL = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
         let libraryData = [];
 
+        // Reliable CSV line parser that respects quotes and doesn't truncate spaces
+        function parseCSVLine(text) {
+            const result = [];
+            let cur = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(cur.trim());
+                    cur = '';
+                } else {
+                    cur += char;
+                }
+            }
+            result.push(cur.trim());
+            return result;
+        }
+
         async function fetchLibrary() {
             try {
                 const response = await fetch(RAW_URL + `?t=${new Date().getTime()}`);
@@ -44,17 +64,15 @@
                 const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
                 
                 libraryData = lines.slice(1).map(line => {
-                    // Improved CSV regex to handle commas inside quoted strings correctly
-                    let cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
-                    const clean = (val) => val ? val.replace(/^"|"$/g, '').trim() : "";
+                    let cols = parseCSVLine(line);
 
-                    if (cols.length >= 2) { 
+                    if (cols.length >= 29) { 
                         return {
-                            artist: clean(cols[0]),
-                            title: clean(cols[1]),
-                            score: parseFloat(clean(cols[26])) || 0,
-                            gender: clean(cols[27]),
-                            year: parseInt(clean(cols[28])) || 0
+                            artist: cols[0],   // Col A
+                            title: cols[1],    // Col B
+                            score: parseFloat(cols[26]) || 0, // Col AA
+                            gender: cols[27],  // Col AB
+                            year: parseInt(cols[28]) || 0     // Col AC
                         };
                     }
                     return null;
