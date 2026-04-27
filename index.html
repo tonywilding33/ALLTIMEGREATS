@@ -18,15 +18,13 @@
 <body>
     <div class="box">
         <h2>ALL TIME GREATS</h2>
-        
         <div id="outputArea">
-            <pre id="playlistDisplay">Loading...</pre>
+            <pre id="playlistDisplay">Loading Data...</pre>
             <div class="controls">
                 <button onclick="generatePlaylist()">Generate New Show</button>
                 <button onclick="downloadTxt()">Download (.txt)</button>
             </div>
         </div>
-
         <footer>
             Credits: Developer Tony Wilding<br>
             Original National Request Chart Data (Top 500) Contributed by Mark W Snowdon
@@ -37,24 +35,12 @@
         const RAW_URL = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
         let libraryData = [];
 
-        // Reliable CSV line parser that respects quotes and doesn't truncate spaces
-        function parseCSVLine(text) {
-            const result = [];
-            let cur = '';
-            let inQuotes = false;
-            for (let i = 0; i < text.length; i++) {
-                let char = text[i];
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    result.push(cur.trim());
-                    cur = '';
-                } else {
-                    cur += char;
-                }
-            }
-            result.push(cur.trim());
-            return result;
+        function parseCSVLine(line) {
+            // Regex to split by comma but ignore commas inside double quotes
+            const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+            return line.split(regex).map(field => {
+                return field.replace(/^"|"$/g, '').trim();
+            });
         }
 
         async function fetchLibrary() {
@@ -65,23 +51,22 @@
                 
                 libraryData = lines.slice(1).map(line => {
                     let cols = parseCSVLine(line);
-
                     if (cols.length >= 29) { 
                         return {
-                            artist: cols[0],   // Col A
-                            title: cols[1],    // Col B
-                            score: parseFloat(cols[26]) || 0, // Col AA
-                            gender: cols[27],  // Col AB
-                            year: parseInt(cols[28]) || 0     // Col AC
+                            artist: cols[0],   
+                            title: cols[1],    
+                            score: parseFloat(cols[26]) || 0, 
+                            gender: cols[27],  
+                            year: parseInt(cols[28]) || 0     
                         };
                     }
                     return null;
-                }).filter(r => r && r.artist && r.artist !== "0");
+                }).filter(r => r && r.artist && r.artist !== "0" && r.artist !== "");
 
                 if (libraryData.length > 0) {
                     generatePlaylist();
                 } else {
-                    document.getElementById('playlistDisplay').innerText = "Data Error.";
+                    document.getElementById('playlistDisplay').innerText = "Data Error: No valid rows found.";
                 }
             } catch (err) {
                 document.getElementById('playlistDisplay').innerText = "Connection Error.";
