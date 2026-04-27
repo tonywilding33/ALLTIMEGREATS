@@ -7,10 +7,8 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f0f2f5; }
         .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid #1a252f; }
         
-        /* Centered Title */
         h2 { color: #1a252f; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
         
-        /* Playlist Area */
         pre { background: #1a252f; color: #f8f9f9; padding: 25px; border-radius: 6px; font-size: 0.9em; white-space: pre-wrap; border-left: 5px solid #3498db; overflow-x: auto; min-height: 200px; }
         
         .controls { text-align: center; margin-top: 20px; }
@@ -37,7 +35,8 @@
     </div>
 
     <script>
-        const SHEET_URL = 'https://raw.githubusercontent.com/tonywilding33/NHRRC/main/NHRRC%20Data.csv';
+        // Updated URL to point to the correct CSV filename in your repository
+        const SHEET_URL = 'https://raw.githubusercontent.com/tonywilding33/ALLTIMEGREATS/main/Scored_Hospital_Radio_Data.csv';
         let libraryData = [];
 
         function fixArtist(name) {
@@ -51,15 +50,13 @@
         async function fetchLibrary() {
             try {
                 const response = await fetch(SHEET_URL);
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) throw new Error('File not found');
                 const csvText = await response.text();
                 
-                // Split lines and filter out empty ones
                 const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
-                const dataRows = lines.slice(1); // Skip header
+                const dataRows = lines.slice(1); 
                 
                 libraryData = dataRows.map(line => {
-                    // Split by comma but respect quotes
                     let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 10) {
                         return {
@@ -72,7 +69,7 @@
                         };
                     }
                     return null;
-                }).filter(row => row !== null && row.artist !== "Unknown Artist");
+                }).filter(row => row !== null && row.artist);
                 
                 if (libraryData.length > 0) {
                     generatePlaylist();
@@ -80,7 +77,7 @@
                     document.getElementById('playlistDisplay').innerText = "System Error: No data found in CSV.";
                 }
             } catch (err) {
-                document.getElementById('playlistDisplay').innerText = "System Error: Unable to connect to GitHub data.";
+                document.getElementById('playlistDisplay').innerText = "System Error: Unable to access Scored_Hospital_Radio_Data.csv.";
                 console.error(err);
             }
         }
@@ -90,17 +87,11 @@
             let playlist = [];
             let usedArtists = new Set();
             
-            // Generate 16 slots for a 60-minute show
             for (let i = 0; i < 16; i++) {
                 let targetCat = hourPattern[i % hourPattern.length];
                 
-                // Primary Filter: Category + Artist Protection
                 let pool = libraryData.filter(r => r.cat === targetCat && !usedArtists.has(r.artist));
-
-                // Fallback: Just Category if rules are too tight
                 if (pool.length === 0) pool = libraryData.filter(r => r.cat === targetCat);
-                
-                // Ultimate Fallback: Any song
                 if (pool.length === 0) pool = libraryData;
 
                 let pick = pool[Math.floor(Math.random() * pool.length)];
@@ -134,7 +125,6 @@
             a.click();
         }
 
-        // Run automatically
         fetchLibrary();
     </script>
 </body>
