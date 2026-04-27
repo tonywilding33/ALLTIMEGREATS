@@ -19,7 +19,7 @@
     <div class="box">
         <h2>ALL TIME GREATS</h2>
         <div id="outputArea">
-            <pre id="playlistDisplay">Loading Full Artist Credits...</pre>
+            <pre id="playlistDisplay">Checking Artist Names...</pre>
             <div class="controls">
                 <button onclick="generatePlaylist()">Generate New Show</button>
                 <button onclick="downloadTxt()">Download (.txt)</button>
@@ -36,23 +36,25 @@
         let libraryData = [];
 
         function parseCSVLine(text) {
-            let fields = [];
-            let currentField = "";
+            const result = [];
+            let cell = "";
             let inQuotes = false;
 
             for (let i = 0; i < text.length; i++) {
-                let char = text[i];
+                const char = text[i];
                 if (char === '"') {
                     inQuotes = !inQuotes;
                 } else if (char === ',' && !inQuotes) {
-                    fields.push(currentField.trim());
-                    currentField = "";
+                    result.push(cell.trim());
+                    cell = "";
                 } else {
-                    currentField += char;
+                    cell += char;
                 }
             }
-            fields.push(currentField.trim());
-            return fields;
+            result.push(cell.trim());
+            
+            // Final cleanup of any remaining double quotes within the strings
+            return result.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
         }
 
         async function fetchLibrary() {
