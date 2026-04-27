@@ -17,7 +17,7 @@
     <div class="box">
         <h2>ALL TIME GREATS</h2>
         <div id="outputArea">
-            <pre id="playlistDisplay">Accessing Scored_Hospital_Radio_Data.csv...</pre>
+            <pre id="playlistDisplay">Loading data from root...</pre>
             <div class="controls">
                 <button onclick="downloadTxt()">Download Playlist (.txt)</button>
             </div>
@@ -35,31 +35,20 @@
         async function fetchLibrary() {
             try {
                 const response = await fetch(RAW_URL + `?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error('File not found on GitHub');
-                
                 const csvText = await response.text();
                 const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
                 
-                if (lines.length < 2) {
-                    document.getElementById('playlistDisplay').innerText = "Root file located, but it appears to be empty.";
-                    return;
-                }
-
                 libraryData = lines.slice(1).map(line => {
-                    // Split by comma but ignore commas inside quotes
                     let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    
-                    // Clean quotes and trim
                     const clean = (val) => val ? val.replace(/"/g, '').trim() : "";
 
-                    if (cols.length >= 4) {
+                    if (cols.length >= 29) { // Ensure col AC (index 28) exists
                         return {
                             artist: clean(cols[0]),    // Col A
                             title: clean(cols[1]),     // Col B
-                            cat: clean(cols[3]).toUpperCase(), // Col D
-                            year: parseInt(clean(cols[8])) || 0, // Col I
-                            gender: clean(cols[9]),    // Col J
-                            score: clean(cols[26])     // Col AA
+                            score: parseFloat(clean(cols[26])) || 0, // Col AA
+                            gender: clean(cols[27]),   // Col AB
+                            year: parseInt(clean(cols[28])) || 0     // Col AC
                         };
                     }
                     return null;
@@ -68,45 +57,46 @@
                 if (libraryData.length > 0) {
                     generatePlaylist();
                 } else {
-                    document.getElementById('playlistDisplay').innerText = "Data found, but Artist/Title columns are unreadable.";
+                    document.getElementById('playlistDisplay').innerText = "System Error: Mapping failed. Check Col AA, AB, AC.";
                 }
             } catch (err) {
-                document.getElementById('playlistDisplay').innerText = "Connection Error: " + err.message;
+                document.getElementById('playlistDisplay').innerText = "Connection Error.";
             }
         }
 
         function generatePlaylist() {
-            const pattern = ["A", "B", "C"]; 
             let playlist = [];
             let artistHistory = [];
             let genderHistory = [];
-            let lastEraWasModern = false;
+            let lastYear = 0;
+
+            // Sort library by score to create virtual tiers
+            const sorted = [...libraryData].sort((a, b) => b.score - a.score);
 
             for (let i = 0; i < 16; i++) {
-                let targetCat = pattern[i % pattern.length];
-                
-                // Advanced Anti-Clumping Filter
-                let pool = libraryData.filter(r => {
-                    const isCat = r.cat === targetCat;
+                // To avoid clumping, we pick from a random segment of the sorted library
+                // This ensures we get a mix of high and mid scores
+                let pool = sorted.filter(r => {
                     const artistRepeat = artistHistory.includes(r.artist);
                     const genderClump = genderHistory.length >= 2 && 
                                         genderHistory[genderHistory.length-1] === r.gender && 
                                         genderHistory[genderHistory.length-2] === r.gender;
-                    return isCat && !artistRepeat && !genderClump;
+                    // Era Clump: Try not to play two songs from the same decade back-to-back
+                    const eraClump = lastYear !== 0 && Math.abs(r.year - lastYear) < 10;
+                    
+                    return !artistRepeat && !genderClump && !eraClump;
                 });
 
-                // Relax rules if pool is empty
-                if (pool.length === 0) pool = libraryData.filter(r => r.cat === targetCat);
-                if (pool.length === 0) pool = libraryData;
+                if (pool.length === 0) pool = sorted;
 
-                // Attempt to flip Era (Modern vs Classic) to prevent era-clumping
-                let pick = pool.find(r => (r.year >= 1980) !== lastEraWasModern) || pool[Math.floor(Math.random() * pool.length)];
+                // Pick a song from the pool
+                let pick = pool[Math.floor(Math.random() * Math.min(pool.length, 50))];
 
                 if (pick) {
                     playlist.push(pick);
                     artistHistory.push(pick.artist);
                     genderHistory.push(pick.gender);
-                    lastEraWasModern = (pick.year >= 1980);
+                    lastYear = pick.year;
                     if (genderHistory.length > 2) genderHistory.shift();
                 }
             }
