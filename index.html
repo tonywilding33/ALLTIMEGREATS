@@ -17,7 +17,7 @@
     <div class="box">
         <h2>ALL TIME GREATS</h2>
         <div id="outputArea">
-            <pre id="playlistDisplay">Loading data from root...</pre>
+            <pre id="playlistDisplay">Loading playlist...</pre>
             <div class="controls">
                 <button onclick="downloadTxt()">Download Playlist (.txt)</button>
             </div>
@@ -42,11 +42,11 @@
                     let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     const clean = (val) => val ? val.replace(/"/g, '').trim() : "";
 
-                    if (cols.length >= 29) { // Ensure col AC (index 28) exists
+                    if (cols.length >= 29) { 
                         return {
                             artist: clean(cols[0]),    // Col A
                             title: clean(cols[1]),     // Col B
-                            score: parseFloat(clean(cols[26])) || 0, // Col AA
+                            score: parseFloat(clean(cols[26])) || 0, // Col AA (e.g. 22.50)
                             gender: clean(cols[27]),   // Col AB
                             year: parseInt(clean(cols[28])) || 0     // Col AC
                         };
@@ -57,7 +57,7 @@
                 if (libraryData.length > 0) {
                     generatePlaylist();
                 } else {
-                    document.getElementById('playlistDisplay').innerText = "System Error: Mapping failed. Check Col AA, AB, AC.";
+                    document.getElementById('playlistDisplay').innerText = "Data error: Check Col A, B, AA, AB, AC.";
                 }
             } catch (err) {
                 document.getElementById('playlistDisplay').innerText = "Connection Error.";
@@ -70,27 +70,24 @@
             let genderHistory = [];
             let lastYear = 0;
 
-            // Sort library by score to create virtual tiers
-            const sorted = [...libraryData].sort((a, b) => b.score - a.score);
+            // Use the 22.50 scores to sort the pool so we pick high-quality tracks
+            const sortedByScore = [...libraryData].sort((a, b) => b.score - a.score);
 
             for (let i = 0; i < 16; i++) {
-                // To avoid clumping, we pick from a random segment of the sorted library
-                // This ensures we get a mix of high and mid scores
-                let pool = sorted.filter(r => {
+                let pool = sortedByScore.filter(r => {
                     const artistRepeat = artistHistory.includes(r.artist);
                     const genderClump = genderHistory.length >= 2 && 
                                         genderHistory[genderHistory.length-1] === r.gender && 
                                         genderHistory[genderHistory.length-2] === r.gender;
-                    // Era Clump: Try not to play two songs from the same decade back-to-back
                     const eraClump = lastYear !== 0 && Math.abs(r.year - lastYear) < 10;
                     
                     return !artistRepeat && !genderClump && !eraClump;
                 });
 
-                if (pool.length === 0) pool = sorted;
+                if (pool.length === 0) pool = sortedByScore;
 
-                // Pick a song from the pool
-                let pick = pool[Math.floor(Math.random() * Math.min(pool.length, 50))];
+                // Pick from the top weighted section of the library for "All Time Greats" quality
+                let pick = pool[Math.floor(Math.random() * Math.min(pool.length, 60))];
 
                 if (pick) {
                     playlist.push(pick);
@@ -107,8 +104,8 @@
             let out = "";
             list.forEach((s, index) => {
                 let num = (index + 1).toString().padStart(2, '0');
-                // Format: 01 ARTIST Title Score
-                out += `${num} ${s.artist.toUpperCase()} ${s.title} ${s.score}\n`;
+                // Format: 01 ARTIST Song Title (Score removed from view)
+                out += `${num} ${s.artist.toUpperCase()} ${s.title}\n`;
             });
             document.getElementById('playlistDisplay').innerText = out;
         }
