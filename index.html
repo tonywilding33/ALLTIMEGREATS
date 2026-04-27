@@ -2,106 +2,130 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Time Greats | Music Scheduler</title>
+    <title>All Time Greats</title>
     <style>
-        :root {
-            --power-gold: #ff4b2b;
-            --heavy: #ffb400;
-            --medium: #2b95ff;
-            --bg-dark: #121212;
-            --panel-dark: #1e1e1e;
-        }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-dark); color: #e0e0e0; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #111; color: #ddd; margin: 0; }
         
-        /* GHeader Downloader Style */
+        /* GHeader Downloader */
         .gheader-downloader {
-            background: #252525;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #333;
+            background: #222; padding: 12px 30px; border-bottom: 2px solid #444;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .btn-download {
-            background: #4caf50;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .btn-download:hover { background: #45a049; }
+        .dl-btn { background: #007bff; color: white; border: none; padding: 6px 12px; cursor: pointer; font-weight: bold; }
 
-        .main-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .container { max-width: 850px; margin: 30px auto; }
         
-        h1.brand-title { text-align: center; color: #fff; margin-bottom: 30px; font-weight: 300; letter-spacing: 2px; }
-
-        table { width: 100%; border-collapse: collapse; background: var(--panel-dark); border-radius: 8px; overflow: hidden; }
-        th { background: #333; padding: 15px; text-align: left; font-size: 12px; color: #999; text-transform: uppercase; }
-        td { padding: 15px; border-bottom: 1px solid #2a2a2a; }
-        
-        .tier-badge { padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; color: #fff; }
-        .tier-a .tier-badge { background: var(--power-gold); }
-        .tier-b .tier-badge { background: var(--heavy); color: #000; }
-        .tier-c .tier-badge { background: var(--medium); }
+        /* Strict List Format - No Headers */
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 10px; border-bottom: 1px solid #222; }
+        .col-num { width: 30px; color: #666; font-family: monospace; }
+        .col-artist { font-weight: bold; color: #fff; width: 40%; }
+        .col-title { color: #aaa; }
+        .col-chart { text-align: right; color: #00ff00; font-weight: bold; width: 10%; }
 
         /* Footer Credits */
         footer {
-            margin-top: 50px;
-            padding: 30px;
-            background: #0a0a0a;
-            text-align: center;
-            border-top: 1px solid #222;
-            color: #666;
-            font-size: 13px;
+            margin-top: 60px; padding: 20px; border-top: 1px solid #333;
+            text-align: center; font-size: 12px; color: #555; line-height: 1.6;
         }
-        footer span { color: #888; font-weight: bold; }
+        .dev-credit { color: #888; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="gheader-downloader">
-        <div>
-            <span style="color: #4caf50; font-weight: bold;">G-Header</span> 
-            <small style="margin-left:10px; color:#777;">System Ready</small>
-        </div>
-        <button class="btn-download" onclick="window.print()">Download Schedule PDF</button>
+        <div style="color:#00ff00; font-weight:bold; letter-spacing:1px;">GHEADER DOWNLOADER SYSTEM</div>
+        <button class="dl-btn" onclick="window.print()">GENERATE PDF</button>
     </div>
 
-    <div class="main-container">
-        <h1 class="brand-title">ALL TIME GREATS</h1>
-
+    <div class="container">
+        <h1 style="text-align:center; color:#fff; font-weight:300;">All Time Greats</h1>
         <table>
-            <thead>
-                <tr>
-                    <th>Slot</th>
-                    <th>Rotation</th>
-                    <th>Artist</th>
-                    <th>Song Title</th>
-                    <th>Year</th>
-                </tr>
-            </thead>
             <tbody id="playlist-body">
                 </tbody>
         </table>
     </div>
 
     <footer>
-        <p>&copy; 2026 <span>All Time Greats</span> Music Scheduling System.</p>
-        <p>Advanced Artist Repeat Protection Logic v2.4 | Powered by Gemini Engine</p>
+        <p class="dev-credit">Developer Credits: Broadcast Automation Logic & System Architecture by G-Header Systems</p>
+        <p>&copy; 2026 All Time Greats | Proprietary Scheduling Engine v4.0</p>
     </footer>
 
 <script>
-    // --- DATA POOLS ---
-    let tierA = [ /* Add your Tier A songs here */ ];
-    let tierB = [ /* Add your Tier B songs here */ ];
-    let tierC = [ /* Add your Tier C songs here */ ];
+    // DATA POOLS (Ensure 'chart' property exists)
+    let tierA = [
+        { artist: "Queen", title: "Bohemian Rhapsody", chart: "01", gender: "M", year: 1975 },
+        { artist: "Madonna", title: "Like A Prayer", chart: "01", gender: "F", year: 1989 }
+    ];
+    let tierB = [
+        { artist: "Michael Jackson", title: "Billie Jean", chart: "01", gender: "M", year: 1982 },
+        { artist: "The Beatles", title: "Hey Jude", chart: "01", gender: "M", year: 1968 }
+    ];
+    let tierC = [
+        { artist: "ABBA", title: "Dancing Queen", chart: "01", gender: "F", year: 1976 },
+        { artist: "David Bowie", title: "Heroes", chart: "24", gender: "M", year: 1977 }
+    ];
 
-    // Note: Use the selection logic from our previous messages here
-    // to populate the 'playlist-body' table.
+    let artistHistory = []; 
+    let genderHistory = []; 
+    let lastEraWasModern = false;
+    const tableBody = document.getElementById('playlist-body');
+
+    for (let i = 0; i < 16; i++) {
+        const countNum = (i + 1).toString().padStart(2, '0');
+        let pool;
+
+        // Tier Logic
+        if (i % 4 === 0) pool = tierA;
+        else if (i % 2 === 0) pool = tierB;
+        else pool = tierC;
+
+        // Safety check if pool is exhausted
+        if (!pool || pool.length === 0) pool = [...tierA, ...tierB, ...tierC];
+        if (pool.length === 0) break;
+
+        let pick = null;
+        let pickIndex = -1;
+
+        for (let j = 0; j < pool.length; j++) {
+            const s = pool[j];
+            const artistRepeat = artistHistory.includes(s.artist);
+            const genderOverload = genderHistory.length >= 2 && genderHistory.every(g => g === s.gender);
+            const isModern = s.year >= 1980;
+            const eraShift = (isModern !== lastEraWasModern);
+
+            if (!artistRepeat && !genderOverload) {
+                pick = s;
+                pickIndex = j;
+                if (eraShift) break; 
+            }
+        }
+
+        // Fallback
+        if (!pick) {
+            pickIndex = pool.findIndex(s => !artistHistory.includes(s.artist));
+            if (pickIndex === -1) pickIndex = 0; 
+            pick = pool[pickIndex];
+        }
+
+        if (pick) {
+            pool.splice(pickIndex, 1);
+            artistHistory.push(pick.artist);
+            genderHistory.push(pick.gender);
+            if (genderHistory.length > 2) genderHistory.shift();
+            lastEraWasModern = (pick.year >= 1980);
+
+            // Row construction: NO HEADERS. Number | Artist | Title | Chart Pos
+            tableBody.innerHTML += `
+                <tr>
+                    <td class="col-num">${countNum}</td>
+                    <td class="col-artist">${pick.artist}</td>
+                    <td class="col-title">${pick.title}</td>
+                    <td class="col-chart">${pick.chart}</td>
+                </tr>
+            `;
+        }
+    }
 </script>
-
 </body>
 </html>
