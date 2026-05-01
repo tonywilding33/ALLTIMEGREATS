@@ -34,7 +34,6 @@
 
     <script>
         const BASE_URL = 'https://raw.githubusercontent.com/tonywilding33/Radio/main/ATG3328152A.csv';
-        const GITHUB_URL = `${BASE_URL}?v=${Math.random()}`;
         let libraryData = [];
 
         function getCleanKey(str) {
@@ -46,8 +45,10 @@
 
         async function fetchLibrary() {
             const status = document.getElementById('loadStatus');
+            // Cache Buster: Appends a unique timestamp so the browser MUST reload[cite: 1]
+            const CACHE_BUSTER = `${BASE_URL}?t=${Date.now()}`;
             try {
-                let response = await fetch(GITHUB_URL);
+                let response = await fetch(CACHE_BUSTER);
                 if (response.ok) {
                     const text = await response.text();
                     processData(text);
@@ -87,9 +88,11 @@
 
             for (let i = 0; i < 16; i++) {
                 let pool = sorted.filter(r => {
+                    // Block if played in current 16 tracks
                     if (hourArtKeys.includes(r.artistKey)) return false;
                     if (hourTitKeys.includes(r.titleKey)) return false;
 
+                    // Block if played in last 2 hours[cite: 1]
                     const lastArt = sessionStorage.getItem(`atg_art_${r.artistKey}`);
                     const lastTit = sessionStorage.getItem(`atg_tit_${r.titleKey}`);
                     if (lastArt && (Date.now() - parseInt(lastArt) < TWO_HOURS)) return false;
@@ -100,6 +103,7 @@
                     return !genderClump && !eraClump;
                 });
 
+                // Fail-safe: Always prioritize Artist/Title separation
                 if (pool.length === 0) {
                     pool = sorted.filter(r => !hourArtKeys.includes(r.artistKey) && !hourTitKeys.includes(r.titleKey));
                 }
@@ -111,6 +115,7 @@
                     hourArtKeys.push(pick.artistKey);
                     hourTitKeys.push(pick.titleKey);
                     
+                    // Set Global Locks for 2 hours[cite: 1]
                     sessionStorage.setItem(`atg_art_${pick.artistKey}`, Date.now());
                     sessionStorage.setItem(`atg_tit_${pick.titleKey}`, Date.now());
                     
