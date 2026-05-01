@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="author" content="Tony Wilding">
-    <title>ALL TIME GREATS | Playlist Generator</title>
+    <title>ALL TIME GREATS * | Playlist Generator</title>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; --success: #10b981; }
         body { 
@@ -21,7 +21,7 @@
 </head>
 <body oncontextmenu="return false;">
     <div class="box">
-        <h2>ALL TIME GREATS</h2>
+        <h2>ALL TIME GREATS *</h2>
         <div id="loadStatus" class="status">INITIALIZING...</div>
         <div id="outputArea" style="display:none;"><pre id="playlistDisplay"></pre></div>
         <div class="controls" id="bottomControls" style="display:none; margin-top: 20px;">
@@ -81,17 +81,15 @@
             let hourTitKeys = [];
             let genderHistory = [];
             let lastYear = 0;
-            const TWO_HOURS = 7200000; // 2 Hours in ms
+            const TWO_HOURS = 7200000; 
 
             const sorted = [...libraryData].sort((a, b) => b.score - a.score);
 
             for (let i = 0; i < 16; i++) {
                 let pool = sorted.filter(r => {
-                    // Current Show Check
                     if (hourArtKeys.includes(r.artistKey)) return false;
                     if (hourTitKeys.includes(r.titleKey)) return false;
 
-                    // 2-Hour Global Check[cite: 1]
                     const lastArt = sessionStorage.getItem(`atg_art_${r.artistKey}`);
                     const lastTit = sessionStorage.getItem(`atg_tit_${r.titleKey}`);
                     if (lastArt && (Date.now() - parseInt(lastArt) < TWO_HOURS)) return false;
@@ -102,7 +100,6 @@
                     return !genderClump && !eraClump;
                 });
 
-                // Fail-safe: prioritizes Artist/Title locks
                 if (pool.length === 0) {
                     pool = sorted.filter(r => !hourArtKeys.includes(r.artistKey) && !hourTitKeys.includes(r.titleKey));
                 }
@@ -114,7 +111,6 @@
                     hourArtKeys.push(pick.artistKey);
                     hourTitKeys.push(pick.titleKey);
                     
-                    // Set Global Locks[cite: 1]
                     sessionStorage.setItem(`atg_art_${pick.artistKey}`, Date.now());
                     sessionStorage.setItem(`atg_tit_${pick.titleKey}`, Date.now());
                     
